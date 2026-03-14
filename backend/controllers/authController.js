@@ -2,14 +2,15 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../utils/db');
 const { getConfig } = require('../utils/env');
+const sendEmail = require('../utils/email');
 
 function validatePasswordStrength(password) {
   if (typeof password !== 'string') return 'Password is required';
   if (password.length < 8) return 'Password must be at least 8 characters';
   if (!/[a-z]/.test(password)) return 'Password must include a lowercase letter';
   if (!/[A-Z]/.test(password)) return 'Password must include an uppercase letter';
-  if (!/[0-9]/.test(password)) return 'Password must include a number';
-  if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include a special character';
+  if (!/\d/.test(password)) return 'Password must include a number';
+  if (!/[^A-Za-z\d]/.test(password)) return 'Password must include a special character';
   return null;
 }
 
@@ -19,7 +20,7 @@ function validateLoginId(loginId) {
   const trimmed = loginId.trim();
   if (trimmed === '') return null;
   if (trimmed.length < 6 || trimmed.length > 12) return 'Login ID must be 6-12 characters';
-  if (!/^[A-Za-z0-9_]+$/.test(trimmed)) return 'Login ID can contain letters, numbers, and underscore only';
+  if (!/^\w+$/.test(trimmed)) return 'Login ID can contain letters, numbers, and underscore only';
   return null;
 }
 
@@ -64,7 +65,7 @@ exports.register = async (req, res) => {
     res.status(201).json({ user: newUser.rows[0], token });
   } catch (err) {
     // Handle unique constraint races cleanly
-    if (err && err.code === '23505') {
+    if (err?.code === '23505') {
       return res.status(400).json({ message: 'Email or Login ID already exists' });
     }
 
@@ -134,12 +135,39 @@ exports.forgotPassword = async (req, res) => {
       [user.rows[0].id, codeHash, expiresAt]
     );
 
-    // No third-party provider: return the code only in development to unblock local testing.
-    const includeCode = process.env.NODE_ENV !== 'production';
-    res.json({
-      message: 'If the account exists, a reset code has been generated.',
-      ...(includeCode ? { reset_code: resetCode } : {})
-    });
+    const message = `You are receiving this email because you (or someone else) have requested the reset of a password. \n\n Your password reset code is: ${resetCode} \n\n This code will expire in 10 minutes.`;
+
+    try {
+      await sendEmail({
+        email: identifier,
+        subject: 'Password Reset Code - CoreInventory',
+        message: message,
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #73579b;">Password Reset Request</h2>
+            <p>You requested a password reset. Use the code below to reset your password:</p>
+            <div style="background: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; border-radius: 8px; margin: 20px 0;">
+              ${resetCode}
+            </div>
+            <p>This code will expire in 10 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;" />
+            <p style="font-size: 12px; color: #999;">CoreInventory Team</p>
+          </div>
+        `
+      });
+
+      res.json({ message: 'If the account exists, a reset code has been sent to your email.' });
+    } catch (err) {
+      console.warn('Email send failed, falling back to response code for DEV mode:', err.message);
+      
+      const includeCode = process.env.NODE_ENV !== 'production';
+      res.json({
+        message: 'If the account exists, a reset code has been generated.',
+        error: 'Email delivery failed. ' + (includeCode ? 'Check reset_code in response.' : 'Please contact support.'),
+        ...(includeCode ? { reset_code: resetCode } : {})
+      });
+    }
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');

@@ -19,15 +19,7 @@ export default function SignUpPage() {
     dispatch(registerUser(formData));
   };
 
-  const fillDemo = () => {
-    const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    setFormData({
-      name: `Demo User ${suffix}`,
-      email: `demo${suffix}@coreinventory.dev`,
-      password: 'DemoUser@123!',
-      role: 'warehouse_staff',
-    });
-  };
+
 
   return (
     <div className="min-h-screen bg-surface flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -104,15 +96,7 @@ export default function SignUpPage() {
               {loading ? 'Creating account...' : 'Sign up'}
             </button>
 
-            {import.meta.env.DEV && (
-              <button
-                type="button"
-                onClick={fillDemo}
-                className="w-full px-4 py-2 rounded-lg border border-border bg-white text-text-secondary text-sm font-semibold hover:bg-gray-50 transition-colors"
-              >
-                Fill demo data
-              </button>
-            )}
+
           </form>
 
           <div className="mt-6 text-center text-sm">

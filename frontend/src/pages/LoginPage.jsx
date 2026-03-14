@@ -74,24 +74,7 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
 
-            {import.meta.env.DEV && (
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ identifier: 'manager@coreinventory.dev', password: 'Manager@123!' })}
-                  className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
-                >
-                  Fill Manager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ identifier: 'staff1@coreinventory.dev', password: 'Staff@123!' })}
-                  className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
-                >
-                  Fill Staff
-                </button>
-              </div>
-            )}
+
           </form>
 
           <div className="mt-6 text-center text-sm">

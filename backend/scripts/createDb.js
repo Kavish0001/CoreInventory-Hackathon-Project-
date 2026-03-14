@@ -33,7 +33,7 @@ async function main() {
   try {
     const exists = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [DB_NAME]);
     if (exists.rows.length === 0) {
-      await client.query(`CREATE DATABASE "${DB_NAME.replace(/"/g, '""')}"`);
+      await client.query(`CREATE DATABASE "${DB_NAME.replaceAll('"', '""')}"`);
       console.log(`Database created: ${DB_NAME}`);
     } else {
       console.log(`Database already exists: ${DB_NAME}`);

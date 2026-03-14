@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, createProduct, setProductSearch, selectProducts } from '../features/products/productsSlice';
 import { fetchStock, selectStock } from '../features/stock/stockSlice';
-import { DataTable, SearchInput, StatusBadge, Modal, FormField, LoadingSpinner } from '../components/ui';
+import { DataTable, SearchInput, StatusBadge, Modal, FormField } from '../components/ui';
 import { Plus } from 'lucide-react';
 
 export default function ProductsPage() {
@@ -12,7 +12,7 @@ export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', sku: '', category: '', unit: '', per_unit_cost: '', reorder_level: '' });
   const [formError, setFormError] = useState('');
-  const showDemoFill = import.meta.env.DEV;
+
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -85,17 +85,7 @@ export default function ProductsPage() {
     }
   };
 
-  const fillDemo = () => {
-    const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    setForm({
-      name: `Demo Product ${suffix}`,
-      sku: `DEMO-${suffix}`,
-      category: 'Consumables',
-      unit: 'pcs',
-      per_unit_cost: '19.99',
-      reorder_level: '10',
-    });
-  };
+
 
   return (
     <div>
@@ -136,17 +126,7 @@ export default function ProductsPage() {
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Create Product" size="md">
         <form onSubmit={handleCreate} className="space-y-4">
           {formError && <p className="text-sm text-danger bg-danger-light px-3 py-2 rounded-lg">{formError}</p>}
-          {showDemoFill && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={fillDemo}
-                className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
-              >
-                Fill demo data
-              </button>
-            </div>
-          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Product Name" required htmlFor="prod-name">
               <input id="prod-name" type="text" required className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

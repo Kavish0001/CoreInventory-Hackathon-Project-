@@ -48,6 +48,13 @@ function getConfig() {
       connectionTimeoutMillis: optionalInt('DB_CONN_TIMEOUT_MS', 5000),
       ssl: optionalBool('DB_SSL', false),
     },
+    smtp: {
+      host: optional('SMTP_HOST', 'smtp.gmail.com'),
+      port: optionalInt('SMTP_PORT', 587),
+      user: optional('SMTP_USER', ''),
+      pass: optional('SMTP_PASS', ''),
+      from: optional('SMTP_FROM', 'CoreInventory <no-reply@coreinventory.dev>'),
+    },
   };
 }
 

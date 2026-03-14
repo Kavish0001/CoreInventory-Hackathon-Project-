@@ -29,7 +29,7 @@ export default function TransfersList() {
     destination_location_id: '',
   });
   const [lines, setLines] = useState([{ product_id: '', quantity: 1 }]);
-  const showDemoFill = import.meta.env.DEV;
+
 
   const sourceLocations = useMemo(() => locationsByWarehouse[form.warehouse_id] || [], [locationsByWarehouse, form.warehouse_id]);
   const destinationLocations = sourceLocations;
@@ -116,6 +116,7 @@ export default function TransfersList() {
         setStockByProductId(map);
       } catch (e) {
         if (!alive) return;
+        console.error('Failed to load stock data:', e);
         setStockByProductId({});
       }
     }
@@ -174,8 +175,8 @@ export default function TransfersList() {
       try {
         const listRes = await inventoryService.listTransfers({ q: transferQuery || '' });
         setTransfers(listRes.data || []);
-      } catch {
-        // ignore refresh failures
+      } catch (err) {
+        console.warn('Failed to refresh transfers list:', err);
       }
       setOpen(false);
       setForm({ warehouse_id: '', source_location_id: '', destination_location_id: '' });
@@ -187,28 +188,7 @@ export default function TransfersList() {
     }
   };
 
-  const fillDemo = () => {
-    const wh = warehouses?.[0];
-    const whId = wh?.id ? String(wh.id) : '';
-    const locs = locationsByWarehouse[whId] || [];
-    const src = locs[0]?.id ? String(locs[0].id) : '';
-    const dst = locs[1]?.id ? String(locs[1].id) : '';
-    // Prefer products that actually have stock at source
-    const inStockIds = Object.entries(stockByProductId)
-      .filter(([, qty]) => Number(qty) > 0)
-      .map(([pid]) => pid);
-    const p1 = products.find((p) => inStockIds.includes(String(p.id))) || products?.[0];
-    const p2 = products.find((p) => String(p.id) !== String(p1?.id) && inStockIds.includes(String(p.id))) || products?.[1] || products?.[0];
 
-    setForm({
-      warehouse_id: whId,
-      source_location_id: src,
-      destination_location_id: dst && dst !== src ? dst : '',
-    });
-    const l1Qty = Math.min(2, Number(stockByProductId[String(p1?.id)] ?? 2) || 1);
-    const l2Qty = Math.min(1, Number(stockByProductId[String(p2?.id)] ?? 1) || 1);
-    setLines([p1, p2].filter(Boolean).map((p, idx) => ({ product_id: String(p.id), quantity: idx === 0 ? l1Qty : l2Qty })));
-  };
 
   return (
     <div>
@@ -315,17 +295,7 @@ export default function TransfersList() {
           </div>
         )}
 
-        {showDemoFill && (
-          <div className="mb-3 flex justify-end">
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
-            >
-              Fill demo data
-            </button>
-          </div>
-        )}
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Warehouse" required>

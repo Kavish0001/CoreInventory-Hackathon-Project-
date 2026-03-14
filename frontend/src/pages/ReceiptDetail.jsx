@@ -35,7 +35,7 @@ export default function ReceiptDetail() {
   const [lines, setLines] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const showDemoFill = import.meta.env.DEV && isNew;
+
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -91,32 +91,7 @@ export default function ReceiptDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.warehouse_id]);
 
-  const fillDemo = () => {
-    const wh = warehouses?.[0];
-    const now = format(new Date(), 'yyyy-MM-dd');
-    const p1 = products?.[0];
-    const p2 = products?.[1] || products?.[0];
 
-    setForm({
-      supplier: 'ACME Supplies',
-      contact: 'Vendor',
-      schedule_date: now,
-      warehouse_id: wh?.id ? String(wh.id) : '',
-      location_id: '',
-      source_document: 'PO0042',
-    });
-
-    const demoLines = [p1, p2]
-      .filter(Boolean)
-      .map((p, idx) => ({
-        product_id: String(p.id),
-        demand_qty: idx === 0 ? 12 : 6,
-        done_qty: 0,
-        per_unit_cost: p.per_unit_cost || 0,
-      }));
-
-    setLines(demoLines.length ? demoLines : [{ product_id: '', demand_qty: 1, done_qty: 0, per_unit_cost: 0 }]);
-  };
 
   useEffect(() => {
     if (!isNew && currentReceipt?.receipt) {
@@ -276,16 +251,7 @@ export default function ReceiptDetail() {
                 </button>
               </>
             )}
-            {showDemoFill && (
-              <button
-                type="button"
-                onClick={fillDemo}
-                disabled={loading || processing}
-                className="bg-white border border-border hover:bg-gray-50 text-text-secondary px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
-              >
-                Fill demo data
-              </button>
-            )}
+
           </div>
           <div className="overflow-x-auto">
              <StatusBar steps={['draft', 'ready', 'done']} current={status === 'waiting' ? 'ready' : status} />
