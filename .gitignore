@@ -36,3 +36,6 @@ coverage/
 
 # Dummy folder
 dummy_backend/
+
+# Package Lock Files
+frontend/package-lock.json

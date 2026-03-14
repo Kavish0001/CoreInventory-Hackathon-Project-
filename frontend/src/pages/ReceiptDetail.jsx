@@ -1,7 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchReceipt, createReceipt, confirmReceipt, validateReceipt, clearCurrentReceipt, selectReceipts } from '../features/inventory/receiptsSlice';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { fetchProducts, selectProducts } from '../features/products/productsSlice';
 import { fetchWarehouses, selectWarehouses } from '../features/warehouses/warehousesSlice';
 import { StatusBadge, StatusBar, Breadcrumb, FormField, LoadingSpinner } from '../components/ui';
@@ -85,6 +87,52 @@ export default function ReceiptDetail() {
     }
   };
 
+  const handleDownload = () => {
+    if (!currentReceipt?.receipt) return;
+    const { receipt: r, items } = currentReceipt;
+    
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(115, 87, 155); // Odoo Purple
+    doc.text('CORE INVENTORY RECEIPT', 14, 22);
+    
+    // Meta Info
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Reference: ${r.reference_code}`, 14, 32);
+    doc.text(`Supplier: ${r.supplier}`, 14, 38);
+    doc.text(`Status: ${r.status.toUpperCase()}`, 14, 44);
+    doc.text(`Date: ${r.schedule_date ? format(new Date(r.schedule_date), 'PPP HH:mm') : 'N/A'}`, 14, 50);
+    
+    // Table
+    const tableColumn = ["#", "Product", "SKU", "Demand", "Done"];
+    const tableRows = items.map((item, index) => [
+      index + 1,
+      item.product_name || '—',
+      item.sku || '—',
+      item.demand_qty,
+      item.done_qty
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 60,
+      theme: 'grid',
+      headStyles: { fillStyle: 'fill', fillColor: [115, 87, 155] },
+    });
+
+    // Footer
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(10);
+    doc.text(`Notes: ${r.notes || '—'}`, 14, finalY);
+    doc.text(`Generated on: ${format(new Date(), 'PPP HH:mm:ss')}`, 14, finalY + 10);
+
+    doc.save(`${r.reference_code}_Receipt.pdf`);
+  };
+
   if (loading && !isNew && !currentReceipt) {
     return <div className="py-20 flex justify-center"><LoadingSpinner size="lg" /></div>;
   }
@@ -130,8 +178,11 @@ export default function ReceiptDetail() {
                     <CheckSquare size={16} /> Validate
                   </button>
                 )}
-                <button className="bg-white border border-border hover:bg-gray-50 text-text-secondary px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors">
-                  Print
+                <button 
+                  onClick={handleDownload}
+                  className="bg-white border border-border hover:bg-gray-50 text-text-secondary px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                >
+                  Download
                 </button>
               </>
             )}

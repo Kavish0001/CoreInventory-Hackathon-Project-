@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, selectAuth } from '../../features/auth/authSlice';
@@ -70,6 +69,13 @@ export default function Sidebar() {
     navigate('/login');
   };
 
+  let toggleBtnTitle = 'Collapse Sidebar';
+  if (mobileOpen) {
+    toggleBtnTitle = 'Close Sidebar';
+  } else if (collapsed) {
+    toggleBtnTitle = 'Expand Sidebar';
+  }
+
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -84,11 +90,16 @@ export default function Sidebar() {
           </div>
         )}
         <button
-          onClick={() => { setCollapsed(!collapsed); setMobileOpen(false); }}
-          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          className={`p-1.5 rounded-lg hover:bg-sidebar-active transition-colors hidden lg:flex items-center justify-center shrink-0 ${collapsed ? 'text-white' : 'text-sidebar-text hover:text-white ml-2'}`}
+          onClick={() => {
+            if (mobileOpen) setMobileOpen(false);
+            else setCollapsed(!collapsed);
+          }}
+          title={toggleBtnTitle}
+          className={`p-1.5 rounded-lg hover:bg-sidebar-active transition-colors flex items-center justify-center shrink-0 ${
+            collapsed && !mobileOpen ? 'text-white' : 'text-sidebar-text hover:text-white ml-2'
+          } ${!mobileOpen && 'hidden lg:flex'}`}
         >
-          {collapsed ? <Menu size={22} /> : <X size={18} />}
+          {collapsed && !mobileOpen ? <Menu size={22} /> : <X size={18} />}
         </button>
       </div>
 
@@ -155,13 +166,19 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-40 p-2 rounded-lg bg-primary text-white shadow-lg"
-      >
-        <Menu size={20} />
-      </button>
+      {/* Mobile Top Navigation Bar (in normal document flow) */}
+      <div className="lg:hidden flex items-center justify-between bg-sidebar px-4 py-3 shrink-0 shadow-md z-30">
+        <div className="flex items-center gap-3">
+          <img src="/image.png" alt="Logo" className="h-8 w-8 rounded-lg drop-shadow-sm flex-shrink-0" />
+          <h1 className="text-base font-bold text-white tracking-tight">CoreInventory</h1>
+        </div>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+        >
+          <Menu size={20} />
+        </button>
+      </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (

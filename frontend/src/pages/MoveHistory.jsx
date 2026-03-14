@@ -68,8 +68,19 @@ export default function MoveHistory() {
       label: 'Quantity',
       render: (_, row) => {
         const isOut = row.direction === 'OUT';
-        const colorClass = isOut ? 'text-danger bg-danger-light' : 'text-success bg-success-light';
-        const sign = isOut ? '-' : '+';
+        const isInternal = row.direction === 'INTERNAL';
+        
+        let colorClass = 'text-success bg-success-light';
+        let sign = '+';
+        
+        if (isOut) {
+          colorClass = 'text-danger bg-danger-light';
+          sign = '-';
+        } else if (isInternal) {
+          colorClass = 'text-primary bg-primary-light';
+          sign = '';
+        }
+
         return (
           <span className={`px-2 py-0.5 rounded text-xs font-bold ${colorClass}`}>
             {sign}{Math.abs(row.quantity)}
