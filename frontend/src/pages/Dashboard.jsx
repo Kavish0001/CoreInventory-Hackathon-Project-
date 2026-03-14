@@ -11,9 +11,11 @@ import {
   Plus
 } from 'lucide-react';
 
+const cx = (...parts) => parts.filter(Boolean).join(' ');
+
 const StatCard = ({ title, value, icon, color }) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
-    <div className={`p-4 rounded-lg ${color} mr-4`}>
+    <div className={cx('p-4', 'rounded-lg', 'mr-4', color)}>
       {icon}
     </div>
     <div>

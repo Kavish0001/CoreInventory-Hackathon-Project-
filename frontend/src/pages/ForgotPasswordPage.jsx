@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { KeyRound } from 'lucide-react';
+import { isValidEmail, passwordRules, validatePassword } from '../utils/authValidation';
+
+const cx = (...parts) => parts.filter(Boolean).join(' ');
+
+const RuleItem = ({ ok, children }) => (
+  <li className={cx('text-xs', ok ? 'text-green-700' : 'text-gray-500')}>{children}</li>
+);
 
 const ForgotPasswordPage = () => {
   const { forgotPassword, resetPassword } = useAuth();
@@ -17,6 +24,12 @@ const ForgotPasswordPage = () => {
     e.preventDefault();
     setError('');
     setInfo('');
+
+    if (!isValidEmail(email)) {
+      setError('Enter a valid email address');
+      return;
+    }
+
     setLoading(true);
     const result = await forgotPassword(email);
     setLoading(false);
@@ -29,6 +42,23 @@ const ForgotPasswordPage = () => {
     e.preventDefault();
     setError('');
     setInfo('');
+
+    if (!isValidEmail(email)) {
+      setError('Enter a valid email address');
+      return;
+    }
+
+    if (!code.trim()) {
+      setError('Reset code is required');
+      return;
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setLoading(true);
     const result = await resetPassword({ email, code, new_password: newPassword });
     setLoading(false);
@@ -61,6 +91,11 @@ const ForgotPasswordPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {email && (
+              <div className={cx('text-xs', isValidEmail(email) ? 'text-green-700' : 'text-red-600')}>
+                {isValidEmail(email) ? 'Email looks good' : 'Enter a valid email address'}
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}
@@ -79,6 +114,11 @@ const ForgotPasswordPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {email && (
+              <div className={cx('text-xs', isValidEmail(email) ? 'text-green-700' : 'text-red-600')}>
+                {isValidEmail(email) ? 'Email looks good' : 'Enter a valid email address'}
+              </div>
+            )}
             <input
               type="text"
               required
@@ -95,6 +135,21 @@ const ForgotPasswordPage = () => {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
+            <div className="bg-white border border-gray-200 rounded-md p-3">
+              <p className="text-xs font-semibold text-gray-700 mb-2">Password rules</p>
+              {(() => {
+                const pwd = passwordRules(newPassword);
+                return (
+                  <ul className="space-y-1">
+                    <RuleItem ok={pwd.minLen}>At least 8 characters</RuleItem>
+                    <RuleItem ok={pwd.lower}>One lowercase letter</RuleItem>
+                    <RuleItem ok={pwd.upper}>One uppercase letter</RuleItem>
+                    <RuleItem ok={pwd.number}>One number</RuleItem>
+                    <RuleItem ok={pwd.special}>One special character</RuleItem>
+                  </ul>
+                );
+              })()}
+            </div>
             <button
               type="submit"
               disabled={loading}
@@ -114,4 +169,3 @@ const ForgotPasswordPage = () => {
 };
 
 export default ForgotPasswordPage;
-
