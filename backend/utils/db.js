@@ -1,16 +1,24 @@
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
+const { getConfig } = require('./env');
 
 dotenv.config();
 
+const config = getConfig();
+
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 5432,
+  user: config.db.user,
+  host: config.db.host,
+  database: config.db.name,
+  password: config.db.password,
+  port: config.db.port,
+  max: config.db.max,
+  idleTimeoutMillis: config.db.idleTimeoutMillis,
+  connectionTimeoutMillis: config.db.connectionTimeoutMillis,
+  ssl: config.db.ssl ? { rejectUnauthorized: false } : undefined,
 });
 
 module.exports = {
   query: (text, params) => pool.query(text, params),
+  pool,
 };

@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../utils/db');
+const { getConfig } = require('../utils/env');
 
 function validatePasswordStrength(password) {
   if (typeof password !== 'string') return 'Password is required';
@@ -50,7 +51,8 @@ exports.register = async (req, res) => {
       [name, login_id?.trim() || null, email, passwordHash, role || 'user']
     );
 
-    const token = jwt.sign({ user_id: newUser.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const config = getConfig();
+    const token = jwt.sign({ user_id: newUser.rows[0].id }, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
 
     res.status(201).json({ user: newUser.rows[0], token });
   } catch (err) {
@@ -76,7 +78,8 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ user_id: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const config = getConfig();
+    const token = jwt.sign({ user_id: user.rows[0].id }, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
 
     res.json({
       user: {

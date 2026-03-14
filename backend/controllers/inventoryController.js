@@ -136,6 +136,12 @@ exports.validateReceipt = async (req, res) => {
     }
 
     for (const item of items.rows) {
+      // Lock the row if it exists to reduce concurrency anomalies
+      await db.query(
+        'SELECT id FROM stock WHERE product_id = $1 AND warehouse_id = $2 AND location_id = $3 FOR UPDATE',
+        [item.product_id, doc.warehouse_id, doc.location_id]
+      );
+
       await db.query(
         `INSERT INTO stock (product_id, warehouse_id, location_id, quantity)
          VALUES ($1, $2, $3, $4)
@@ -289,10 +295,27 @@ exports.validateDelivery = async (req, res) => {
     }
 
     for (const item of items.rows) {
-      await db.query(
-        'UPDATE stock SET quantity = quantity - $1 WHERE product_id = $2 AND warehouse_id = $3 AND location_id = $4',
+      const updated = await db.query(
+        `UPDATE stock
+         SET quantity = quantity - $1
+         WHERE product_id = $2 AND warehouse_id = $3 AND location_id = $4 AND quantity >= $1
+         RETURNING quantity`,
         [item.quantity, item.product_id, doc.warehouse_id, doc.location_id]
       );
+
+      if (updated.rows.length === 0) {
+        await db.query("UPDATE deliveries SET status = 'waiting' WHERE id = $1", [id]);
+        await db.query('COMMIT');
+        return res.status(409).json({
+          message: 'Insufficient stock; delivery moved to Waiting',
+          status: 'waiting',
+          shortages: await computeDeliveryShortages({
+            warehouseId: doc.warehouse_id,
+            locationId: doc.location_id,
+            products: items.rows,
+          }),
+        });
+      }
 
       await db.query(
         `INSERT INTO inventory_movements (product_id, type, source_location_id, quantity, reference_id, reference_code, contact)
@@ -356,19 +379,17 @@ exports.createTransfer = async (req, res) => {
 
     // Apply immediately for now (minimal UX): ready -> done in same call
     for (const item of items) {
-      const stockCheck = await db.query(
-        'SELECT quantity FROM stock WHERE product_id = $1 AND warehouse_id = $2 AND location_id = $3',
-        [item.product_id, warehouse_id, source_location_id]
-      );
-      const available = stockCheck.rows.length > 0 ? Number.parseInt(stockCheck.rows[0].quantity, 10) : 0;
-      if (available < item.quantity) {
-        throw new Error(`Insufficient stock for product ID ${item.product_id} at source`);
-      }
-
-      await db.query(
-        'UPDATE stock SET quantity = quantity - $1 WHERE product_id = $2 AND warehouse_id = $3 AND location_id = $4',
+      const updated = await db.query(
+        `UPDATE stock
+         SET quantity = quantity - $1
+         WHERE product_id = $2 AND warehouse_id = $3 AND location_id = $4 AND quantity >= $1
+         RETURNING quantity`,
         [item.quantity, item.product_id, warehouse_id, source_location_id]
       );
+
+      if (updated.rows.length === 0) {
+        throw new Error(`Insufficient stock for product ID ${item.product_id} at source`);
+      }
 
       await db.query(
         `INSERT INTO stock (product_id, warehouse_id, location_id, quantity)
