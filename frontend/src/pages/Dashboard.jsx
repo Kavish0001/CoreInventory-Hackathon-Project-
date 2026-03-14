@@ -6,7 +6,9 @@ import {
   AlertTriangle, 
   ArrowDownCircle, 
   ArrowUpCircle, 
-  Repeat 
+  Repeat,
+  Search,
+  Plus
 } from 'lucide-react';
 
 const StatCard = ({ title, value, icon, color }) => (
@@ -31,6 +33,7 @@ StatCard.propTypes = {
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -50,9 +53,32 @@ const Dashboard = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">Dashboard</h2>
+          <p className="text-sm text-gray-500">Inventory overview and quick insights.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full sm:w-auto">
+          <div className="relative w-full sm:w-[420px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search for products, orders, or warehouses..."
+              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            className="bg-violet-700 hover:bg-violet-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Plus size={18} /> New Transaction
+          </button>
+        </div>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         <StatCard 
           title="Total Products" 
           value={stats?.total_products || 0} 
@@ -83,12 +109,18 @@ const Dashboard = () => {
           icon={<Repeat className="text-purple-600" />} 
           color="bg-purple-50"
         />
+        <StatCard
+          title="Late / Waiting"
+          value={`${stats?.late_operations || 0} / ${stats?.waiting_operations || 0}`}
+          icon={<AlertTriangle className="text-violet-700" />}
+          color="bg-violet-50"
+        />
       </div>
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold mb-4">Recent Movements</h3>
-          <p className="text-gray-500 italic">No recent movements to display.</p>
+          <p className="text-gray-500 italic">Use “Stock Ledger” to view all movements.</p>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold mb-4">Low Stock Alerts</h3>

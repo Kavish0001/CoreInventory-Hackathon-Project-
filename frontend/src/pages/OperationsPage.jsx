@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { inventoryService, productService, warehouseService } from '../services/api';
 import { ArrowDownCircle, ArrowUpCircle, Repeat, Edit3 } from 'lucide-react';
 
 const OperationsPage = () => {
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('receipt');
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -22,6 +24,14 @@ const OperationsPage = () => {
     dest_location_id: '',
     counted_quantity: ''
   });
+
+  useEffect(() => {
+    const tab = (searchParams.get('tab') || '').toLowerCase();
+    if (tab && ['receipt', 'delivery', 'transfer', 'adjustment'].includes(tab)) {
+      setActiveTab(tab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

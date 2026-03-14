@@ -3,11 +3,13 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
+import { isValidEmail } from '../utils/authValidation';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -15,9 +17,23 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setLoading(true);
 
-    const result = await login(email, password);
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      setLoading(false);
+      setError('Email or Login ID is required');
+      return;
+    }
+
+    if (trimmed.includes('@') && !isValidEmail(trimmed)) {
+      setLoading(false);
+      setError('Enter a valid email address');
+      return;
+    }
+
+    const result = await login(trimmed, password);
     if (result.success) {
       navigate('/');
     } else {
@@ -25,6 +41,8 @@ const LoginPage = () => {
     }
     setLoading(false);
   };
+
+  const canSubmit = !loading && identifier.trim().length > 0 && password.length > 0;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -43,15 +61,20 @@ const LoginPage = () => {
               {error}
             </div>
           )}
+          {info && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative">
+              {info}
+            </div>
+          )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <input
-                type="email"
+                type="text"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email or Login ID"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
               />
             </div>
             <div>
@@ -69,7 +92,7 @@ const LoginPage = () => {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={!canSubmit}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Sign in'}

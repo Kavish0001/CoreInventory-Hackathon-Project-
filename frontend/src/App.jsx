@@ -12,6 +12,8 @@ import OperationsPage from './pages/OperationsPage';
 import Stock from './pages/Stock';
 import StockLedger from './pages/StockLedger';
 import WarehousesPage from './pages/WarehousesPage';
+import Receipts from './pages/Receipts';
+import Deliveries from './pages/Deliveries';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -63,6 +65,16 @@ function App() {
           <Route path="/warehouses" element={
             <ProtectedRoute>
               <WarehousesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/receipts" element={
+            <ProtectedRoute>
+              <Receipts />
+            </ProtectedRoute>
+          } />
+          <Route path="/deliveries" element={
+            <ProtectedRoute>
+              <Deliveries />
             </ProtectedRoute>
           } />
           {/* Fallback for other routes */}
