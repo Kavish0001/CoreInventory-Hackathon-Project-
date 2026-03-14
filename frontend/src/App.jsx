@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { Provider, useSelector } from 'react-redux';
 import store from './app/store';
 import { selectAuth } from './features/auth/authSlice';
@@ -15,15 +16,23 @@ import ReceiptsList from './pages/ReceiptsList';
 import ReceiptDetail from './pages/ReceiptDetail';
 import DeliveriesList from './pages/DeliveriesList';
 import DeliveryDetail from './pages/DeliveryDetail';
+import TransfersList from './pages/TransfersList';
 import MoveHistory from './pages/MoveHistory';
 import WarehousesPage from './pages/WarehousesPage';
+import LocationsPage from './pages/LocationsPage';
+import SettingsPage from './pages/SettingsPage';
 
 // Protected Route
+// eslint-disable-next-line react/prop-types
 function ProtectedRoute({ children }) {
   const { user } = useSelector(selectAuth);
   if (!user) return <Navigate to="/login" replace />;
   return <AppLayout>{children}</AppLayout>;
 }
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 function AppRoutes() {
   return (
@@ -44,8 +53,11 @@ function AppRoutes() {
       <Route path="/deliveries" element={<ProtectedRoute><DeliveriesList /></ProtectedRoute>} />
       <Route path="/deliveries/:id" element={<ProtectedRoute><DeliveryDetail /></ProtectedRoute>} />
       
+      <Route path="/transfers" element={<ProtectedRoute><TransfersList /></ProtectedRoute>} />
       <Route path="/move-history" element={<ProtectedRoute><MoveHistory /></ProtectedRoute>} />
       <Route path="/warehouses" element={<ProtectedRoute><WarehousesPage /></ProtectedRoute>} />
+      <Route path="/locations" element={<ProtectedRoute><LocationsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -14,7 +14,6 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  ChevronDown,
   Boxes,
   Menu,
   X,
@@ -72,25 +71,29 @@ export default function Sidebar() {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
+      <div className={`flex items-center border-b border-white/10 py-4 h-[69px] ${collapsed ? 'justify-center' : 'justify-between px-4'}`}>
         {!collapsed && (
-          <div>
-            <h1 className="text-lg font-bold text-white tracking-tight">CoreInventory</h1>
-            <p className="text-[10px] text-sidebar-text opacity-60">Enterprise Edition</p>
+          <div className="flex items-center gap-3 fade-in">
+            <img src="/image.png" alt="Logo" className="h-9 w-9 rounded-lg drop-shadow-sm flex-shrink-0" />
+            <div className="overflow-hidden">
+              <h1 className="text-lg font-bold text-white tracking-tight truncate">CoreInventory</h1>
+              <p className="text-[10px] text-sidebar-text opacity-60">Enterprise Edition</p>
+            </div>
           </div>
         )}
         <button
           onClick={() => { setCollapsed(!collapsed); setMobileOpen(false); }}
-          className="p-1.5 rounded-lg hover:bg-sidebar-active text-sidebar-text transition-colors hidden lg:block"
+          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          className={`p-1.5 rounded-lg hover:bg-sidebar-active transition-colors hidden lg:flex items-center justify-center shrink-0 ${collapsed ? 'text-white' : 'text-sidebar-text hover:text-white ml-2'}`}
         >
-          {collapsed ? <Menu size={18} /> : <X size={18} />}
+          {collapsed ? <Menu size={22} /> : <X size={18} />}
         </button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-        {NAV_SECTIONS.map((section, sIdx) => (
-          <div key={sIdx}>
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.title || 'Dashboard'}>
             {section.title && !collapsed && (
               <p className="px-3 mb-1.5 text-[10px] font-semibold text-sidebar-text/50 uppercase tracking-widest">
                 {section.title}
@@ -155,7 +158,13 @@ export default function Sidebar() {
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden w-full h-full cursor-default border-none outline-none appearance-none"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close sidebar overlay"
+          tabIndex={-1}
+        />
       )}
 
       {/* Sidebar */}

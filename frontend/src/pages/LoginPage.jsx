@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser, clearAuthError, selectAuth } from '../features/auth/authSlice';
-import { Package } from 'lucide-react';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ identifier: '', password: '' });
@@ -24,9 +23,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-surface flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="flex justify-center mb-4">
-          <div className="bg-primary p-3 rounded-2xl shadow-lg">
-            <Package size={32} className="text-white" />
-          </div>
+          <img src="/image.png" alt="CoreInventory Logo" className="h-20 w-20 drop-shadow-md rounded-[14px]" />
         </div>
         <h2 className="text-3xl font-bold text-text-primary tracking-tight">CoreInventory</h2>
         <p className="mt-2 text-sm text-text-secondary">Enterprise Inventory Management</p>
