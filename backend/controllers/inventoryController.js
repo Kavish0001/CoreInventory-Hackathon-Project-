@@ -12,11 +12,23 @@ async function getWarehouseCode(warehouseId) {
   return String(code).trim() || 'WH';
 }
 
-async function buildReferenceCode({ warehouseId, operation, docId }) {
+async function nextReferenceCode({ warehouseId, operation }) {
   const wh = await getWarehouseCode(warehouseId);
   const op = String(operation || '').toUpperCase();
-  const suffix = padNumber(docId, 4);
-  return `${wh}/${op}/${suffix}`;
+  const prefix = `${wh}/${op}/`;
+
+  const seq = await db.query(
+    `INSERT INTO operation_sequences (warehouse_id, operation_type, current_value, prefix)
+     VALUES ($1, $2, 1, $3)
+     ON CONFLICT (warehouse_id, operation_type)
+     DO UPDATE SET current_value = operation_sequences.current_value + 1, prefix = EXCLUDED.prefix
+     RETURNING current_value, prefix`,
+    [warehouseId, op, prefix]
+  );
+
+  const current = Number.parseInt(seq.rows[0].current_value, 10);
+  const effectivePrefix = seq.rows[0].prefix || prefix;
+  return `${effectivePrefix}${padNumber(current, 4)}`;
 }
 
 function normalizeProducts(products) {
@@ -24,7 +36,7 @@ function normalizeProducts(products) {
   return products
     .map((p) => ({
       product_id: Number.parseInt(p.product_id, 10),
-      quantity: Number.parseInt(p.quantity, 10),
+      quantity: Number.parseInt(p.quantity ?? p.demand_qty, 10),
     }))
     .filter((p) => Number.isFinite(p.product_id) && Number.isFinite(p.quantity) && p.quantity > 0);
 }
@@ -54,7 +66,7 @@ async function computeDeliveryShortages({ warehouseId, locationId, products }) {
 
 // Receipts (Draft -> Ready -> Done)
 exports.createReceipt = async (req, res) => {
-  const { supplier, contact, warehouse_id, location_id, schedule_date, products } = req.body;
+  const { supplier, contact, warehouse_id, location_id, schedule_date, source_document, products } = req.body;
   const items = normalizeProducts(products);
 
   if (!supplier) return res.status(400).json({ message: 'Supplier is required' });
@@ -64,19 +76,18 @@ exports.createReceipt = async (req, res) => {
   try {
     await db.query('BEGIN');
 
+    const referenceCode = await nextReferenceCode({ warehouseId: warehouse_id, operation: 'IN' });
+
     const receiptResult = await db.query(
-      `INSERT INTO receipts (supplier, contact, warehouse_id, location_id, schedule_date, responsible_user_id, status, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, 'draft', $6)
-       RETURNING id`,
-      [supplier, contact || null, warehouse_id, location_id, schedule_date || null, req.user.user_id]
+      `INSERT INTO receipts (supplier, contact, warehouse_id, location_id, schedule_date, source_document, responsible_user_id, status, reference_code, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8, $7)
+       RETURNING id, reference_code`,
+      [supplier, contact || null, warehouse_id, location_id, schedule_date || null, source_document || null, req.user.user_id, referenceCode]
     );
     const receiptId = receiptResult.rows[0].id;
-    const referenceCode = await buildReferenceCode({ warehouseId: warehouse_id, operation: 'IN', docId: receiptId });
-
-    await db.query('UPDATE receipts SET reference_code = $1 WHERE id = $2', [referenceCode, receiptId]);
 
     for (const item of items) {
-      await db.query('INSERT INTO receipt_items (receipt_id, product_id, quantity) VALUES ($1, $2, $3)', [
+      await db.query('INSERT INTO receipt_items (receipt_id, product_id, demand_qty, done_qty) VALUES ($1, $2, $3, 0)', [
         receiptId,
         item.product_id,
         item.quantity,
@@ -129,7 +140,7 @@ exports.validateReceipt = async (req, res) => {
       return res.status(400).json({ message: 'Receipt already done' });
     }
 
-    const items = await db.query('SELECT product_id, quantity FROM receipt_items WHERE receipt_id = $1', [id]);
+    const items = await db.query('SELECT product_id, demand_qty FROM receipt_items WHERE receipt_id = $1', [id]);
     if (items.rows.length === 0) {
       await db.query('ROLLBACK');
       return res.status(400).json({ message: 'Receipt has no items' });
@@ -147,16 +158,17 @@ exports.validateReceipt = async (req, res) => {
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (product_id, warehouse_id, location_id)
          DO UPDATE SET quantity = stock.quantity + $4`,
-        [item.product_id, doc.warehouse_id, doc.location_id, item.quantity]
+        [item.product_id, doc.warehouse_id, doc.location_id, item.demand_qty]
       );
 
       await db.query(
         `INSERT INTO inventory_movements (product_id, type, destination_location_id, quantity, reference_id, reference_code, contact)
          VALUES ($1, 'RECEIPT', $2, $3, $4, $5, $6)`,
-        [item.product_id, doc.location_id, item.quantity, doc.id, doc.reference_code, doc.contact || null]
+        [item.product_id, doc.location_id, item.demand_qty, doc.id, doc.reference_code, doc.contact || null]
       );
     }
 
+    await db.query('UPDATE receipt_items SET done_qty = demand_qty WHERE receipt_id = $1', [id]);
     await db.query("UPDATE receipts SET status = 'done' WHERE id = $1", [id]);
     await db.query('COMMIT');
 
@@ -170,7 +182,7 @@ exports.validateReceipt = async (req, res) => {
 
 // Deliveries (Draft -> Waiting/Ready -> Done)
 exports.createDelivery = async (req, res) => {
-  const { customer, contact, delivery_address, warehouse_id, location_id, schedule_date, products } = req.body;
+  const { customer, contact, delivery_address, warehouse_id, location_id, schedule_date, source_document, operation_type, products } = req.body;
   const items = normalizeProducts(products);
 
   if (!customer) return res.status(400).json({ message: 'Customer is required' });
@@ -180,19 +192,18 @@ exports.createDelivery = async (req, res) => {
   try {
     await db.query('BEGIN');
 
+    const referenceCode = await nextReferenceCode({ warehouseId: warehouse_id, operation: 'OUT' });
+
     const deliveryResult = await db.query(
-      `INSERT INTO deliveries (customer, contact, delivery_address, warehouse_id, location_id, schedule_date, responsible_user_id, status, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $7)
-       RETURNING id`,
-      [customer, contact || null, delivery_address || null, warehouse_id, location_id, schedule_date || null, req.user.user_id]
+      `INSERT INTO deliveries (customer, contact, delivery_address, warehouse_id, location_id, schedule_date, source_document, operation_type, responsible_user_id, status, reference_code, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10, $9)
+       RETURNING id, reference_code`,
+      [customer, contact || null, delivery_address || null, warehouse_id, location_id, schedule_date || null, source_document || null, operation_type || null, req.user.user_id, referenceCode]
     );
     const deliveryId = deliveryResult.rows[0].id;
-    const referenceCode = await buildReferenceCode({ warehouseId: warehouse_id, operation: 'OUT', docId: deliveryId });
-
-    await db.query('UPDATE deliveries SET reference_code = $1 WHERE id = $2', [referenceCode, deliveryId]);
 
     for (const item of items) {
-      await db.query('INSERT INTO delivery_items (delivery_id, product_id, quantity) VALUES ($1, $2, $3)', [
+      await db.query('INSERT INTO delivery_items (delivery_id, product_id, demand_qty, done_qty) VALUES ($1, $2, $3, 0)', [
         deliveryId,
         item.product_id,
         item.quantity,
@@ -229,7 +240,7 @@ exports.confirmDelivery = async (req, res) => {
       return res.status(400).json({ message: 'Delivery already done' });
     }
 
-    const items = await db.query('SELECT product_id, quantity FROM delivery_items WHERE delivery_id = $1', [id]);
+    const items = await db.query('SELECT product_id, demand_qty AS quantity FROM delivery_items WHERE delivery_id = $1', [id]);
     const shortages = await computeDeliveryShortages({
       warehouseId: doc.warehouse_id,
       locationId: doc.location_id,
@@ -277,7 +288,7 @@ exports.validateDelivery = async (req, res) => {
       return res.status(400).json({ message: 'Delivery must be Ready before validation' });
     }
 
-    const items = await db.query('SELECT product_id, quantity FROM delivery_items WHERE delivery_id = $1', [id]);
+    const items = await db.query('SELECT product_id, demand_qty AS quantity FROM delivery_items WHERE delivery_id = $1', [id]);
     const shortages = await computeDeliveryShortages({
       warehouseId: doc.warehouse_id,
       locationId: doc.location_id,
@@ -324,6 +335,7 @@ exports.validateDelivery = async (req, res) => {
       );
     }
 
+    await db.query('UPDATE delivery_items SET done_qty = demand_qty WHERE delivery_id = $1', [id]);
     await db.query("UPDATE deliveries SET status = 'done' WHERE id = $1", [id]);
     await db.query('COMMIT');
     res.json({ message: 'Delivery validated and stock updated', status: 'done' });
@@ -364,7 +376,7 @@ exports.createTransfer = async (req, res) => {
     );
 
     const transferId = transferResult.rows[0].id;
-    const referenceCode = await buildReferenceCode({ warehouseId: warehouse_id, operation: 'INT', docId: transferId });
+    const referenceCode = await nextReferenceCode({ warehouseId: warehouse_id, operation: 'INT' });
     await db.query('UPDATE transfers SET reference_code = $1 WHERE id = $2', [referenceCode, transferId]);
 
     for (const item of items) {
@@ -419,7 +431,7 @@ exports.createTransfer = async (req, res) => {
 
 // Adjustments (Draft -> Done) - minimal flow
 exports.createAdjustment = async (req, res) => {
-  const { warehouse_id, location_id, items, product_id, counted_quantity } = req.body;
+  const { warehouse_id, location_id, reason, notes, items, product_id, counted_quantity } = req.body;
 
   const normalizedItems = Array.isArray(items) && items.length
     ? items
@@ -439,16 +451,19 @@ exports.createAdjustment = async (req, res) => {
     await db.query('BEGIN');
 
     const adjustmentResult = await db.query(
-      `INSERT INTO adjustments (warehouse_id, location_id, status, created_by)
-       VALUES ($1, $2, 'draft', $3)
+      `INSERT INTO adjustments (warehouse_id, location_id, status, reason, notes, created_by)
+       VALUES ($1, $2, 'draft', $3, $4, $5)
        RETURNING id`,
-      [warehouse_id, location_id, req.user.user_id]
+      [warehouse_id, location_id, reason || null, notes || null, req.user.user_id]
     );
     const adjustmentId = adjustmentResult.rows[0].id;
-    const referenceCode = await buildReferenceCode({ warehouseId: warehouse_id, operation: 'ADJ', docId: adjustmentId });
+    const referenceCode = await nextReferenceCode({ warehouseId: warehouse_id, operation: 'ADJ' });
     await db.query('UPDATE adjustments SET reference_code = $1 WHERE id = $2', [referenceCode, adjustmentId]);
 
     for (const item of normalizedItems) {
+      const uomRes = await db.query('SELECT unit FROM products WHERE id = $1', [item.product_id]);
+      const uom = uomRes.rows[0]?.unit || null;
+
       const stockCheck = await db.query(
         'SELECT quantity FROM stock WHERE product_id = $1 AND warehouse_id = $2 AND location_id = $3',
         [item.product_id, warehouse_id, location_id]
@@ -458,8 +473,8 @@ exports.createAdjustment = async (req, res) => {
       const difference = item.counted_quantity - systemQuantity;
 
       await db.query(
-        'INSERT INTO adjustment_items (adjustment_id, product_id, system_quantity, counted_quantity, difference) VALUES ($1, $2, $3, $4, $5)',
-        [adjustmentId, item.product_id, systemQuantity, item.counted_quantity, difference]
+        'INSERT INTO adjustment_items (adjustment_id, product_id, uom, system_quantity, counted_quantity, difference) VALUES ($1, $2, $3, $4, $5, $6)',
+        [adjustmentId, item.product_id, uom, systemQuantity, item.counted_quantity, difference]
       );
 
       await db.query(
@@ -553,7 +568,7 @@ exports.getReceipt = async (req, res) => {
     if (receipt.rows.length === 0) return res.status(404).json({ message: 'Receipt not found' });
 
     const items = await db.query(
-      `SELECT ri.product_id, ri.quantity, p.name AS product_name, p.sku
+      `SELECT ri.product_id, ri.demand_qty, ri.done_qty, p.name AS product_name, p.sku
        FROM receipt_items ri
        JOIN products p ON p.id = ri.product_id
        WHERE ri.receipt_id = $1
@@ -582,7 +597,7 @@ exports.getDelivery = async (req, res) => {
     if (delivery.rows.length === 0) return res.status(404).json({ message: 'Delivery not found' });
 
     const items = await db.query(
-      `SELECT di.product_id, di.quantity, p.name AS product_name, p.sku
+      `SELECT di.product_id, di.demand_qty, di.done_qty, p.name AS product_name, p.sku
        FROM delivery_items di
        JOIN products p ON p.id = di.product_id
        WHERE di.delivery_id = $1

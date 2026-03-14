@@ -67,12 +67,14 @@ exports.getStockSnapshot = async (req, res) => {
          p.id AS product_id,
          p.name AS product_name,
          p.sku,
+         p.per_unit_cost,
          COALESCE(SUM(s.quantity), 0) AS on_hand,
-         COALESCE(SUM(s.quantity), 0) AS free_to_use
+         COALESCE(SUM(s.quantity), 0) AS free_to_use,
+         (COALESCE(SUM(s.quantity), 0) * COALESCE(p.per_unit_cost, 0))::NUMERIC(14,2) AS inventory_value
        FROM products p
        LEFT JOIN stock s ON s.product_id = p.id
        WHERE ($1 = '' OR p.name ILIKE '%' || $1 || '%' OR p.sku ILIKE '%' || $1 || '%')
-       GROUP BY p.id, p.name, p.sku
+       GROUP BY p.id, p.name, p.sku, p.per_unit_cost
        ORDER BY p.name ASC`,
       [q]
     );
@@ -81,6 +83,8 @@ exports.getStockSnapshot = async (req, res) => {
       ...r,
       on_hand: Number.parseInt(r.on_hand, 10),
       free_to_use: Number.parseInt(r.free_to_use, 10),
+      per_unit_cost: Number(r.per_unit_cost ?? 0),
+      inventory_value: Number(r.inventory_value ?? 0),
     })));
   } catch (err) {
     console.error(err);

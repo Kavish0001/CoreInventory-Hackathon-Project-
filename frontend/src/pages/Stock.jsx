@@ -53,26 +53,30 @@ const Stock = () => {
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Product</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">SKU</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Per unit cost</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">On hand</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Free to use</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Value</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-gray-500">Loading stock...</td>
+                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">Loading stock...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-gray-500 italic">No stock records found.</td>
+                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500 italic">No stock records found.</td>
                 </tr>
               ) : (
                 filtered.map((r) => (
                   <tr key={r.product_id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">{r.product_name}</td>
                     <td className="px-6 py-4 text-gray-600">{r.sku}</td>
+                    <td className="px-6 py-4 text-gray-900">{Number(r.per_unit_cost || 0).toFixed(2)}</td>
                     <td className="px-6 py-4 text-gray-900">{r.on_hand}</td>
                     <td className="px-6 py-4 text-gray-900">{r.free_to_use}</td>
+                    <td className="px-6 py-4 text-gray-900">{Number(r.inventory_value || 0).toFixed(2)}</td>
                   </tr>
                 ))
               )}
@@ -85,4 +89,3 @@ const Stock = () => {
 };
 
 export default Stock;
-

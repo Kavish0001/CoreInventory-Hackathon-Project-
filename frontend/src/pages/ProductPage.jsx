@@ -84,7 +84,11 @@ const ProductPage = () => {
         <td className="px-6 py-4 text-slate-600">{product.unit}</td>
         <td className="px-6 py-4">
           <span className={stockBadge(product.status)}>
-            {product.status === 'in_stock' ? 'In Stock' : product.status === 'low_stock' ? 'Low Stock' : 'Out of Stock'}
+            {(() => {
+              if (product.status === 'in_stock') return 'In Stock';
+              if (product.status === 'low_stock') return 'Low Stock';
+              return 'Out of Stock';
+            })()}
           </span>
         </td>
         <td className="px-6 py-4 text-right">

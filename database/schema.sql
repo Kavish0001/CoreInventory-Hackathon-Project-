@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS products (
     sku VARCHAR(100) UNIQUE NOT NULL,
     category VARCHAR(100),
     unit VARCHAR(50),
+    per_unit_cost NUMERIC(12, 2) DEFAULT 0,
     reorder_level INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -82,7 +83,8 @@ CREATE TABLE IF NOT EXISTS receipt_items (
     id SERIAL PRIMARY KEY,
     receipt_id INTEGER REFERENCES receipts(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES products(id),
-    quantity INTEGER NOT NULL
+    demand_qty INTEGER NOT NULL,
+    done_qty INTEGER DEFAULT 0
 );
 
 -- Deliveries Table
@@ -94,6 +96,8 @@ CREATE TABLE IF NOT EXISTS deliveries (
     warehouse_id INTEGER REFERENCES warehouses(id) ON DELETE RESTRICT,
     location_id INTEGER REFERENCES inventory_locations(id) ON DELETE RESTRICT,
     schedule_date DATE,
+    source_document VARCHAR(255),
+    operation_type VARCHAR(100),
     responsible_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     status VARCHAR(50) DEFAULT 'draft', -- draft, waiting, ready, done, cancelled
     reference_code VARCHAR(64) UNIQUE,
@@ -107,7 +111,8 @@ CREATE TABLE IF NOT EXISTS delivery_items (
     id SERIAL PRIMARY KEY,
     delivery_id INTEGER REFERENCES deliveries(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES products(id),
-    quantity INTEGER NOT NULL
+    demand_qty INTEGER NOT NULL,
+    done_qty INTEGER DEFAULT 0
 );
 
 -- Internal Transfers (document table; movements stay in ledger)
@@ -137,6 +142,8 @@ CREATE TABLE IF NOT EXISTS adjustments (
     location_id INTEGER REFERENCES inventory_locations(id) ON DELETE RESTRICT,
     status VARCHAR(50) DEFAULT 'draft',
     reference_code VARCHAR(64) UNIQUE,
+    reason TEXT,
+    notes TEXT,
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT adjustments_status_check CHECK (status IN ('draft','waiting','ready','done','cancelled'))
@@ -146,6 +153,7 @@ CREATE TABLE IF NOT EXISTS adjustment_items (
     id SERIAL PRIMARY KEY,
     adjustment_id INTEGER REFERENCES adjustments(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES products(id) ON DELETE RESTRICT,
+    uom VARCHAR(50),
     system_quantity INTEGER NOT NULL,
     counted_quantity INTEGER NOT NULL,
     difference INTEGER NOT NULL
@@ -166,6 +174,16 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_created_at ON inventory_movements(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_reference_code ON inventory_movements(reference_code);
+
+-- Odoo-style reference sequencing per warehouse + operation (IN/OUT/INT/ADJ)
+CREATE TABLE IF NOT EXISTS operation_sequences (
+    id SERIAL PRIMARY KEY,
+    warehouse_id INTEGER REFERENCES warehouses(id) ON DELETE CASCADE,
+    operation_type VARCHAR(20) NOT NULL,
+    current_value INTEGER DEFAULT 0,
+    prefix VARCHAR(32),
+    UNIQUE(warehouse_id, operation_type)
+);
 
 -- ----------------------------------------
 -- Lightweight "migrations" for dev: ensure
@@ -210,6 +228,7 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS contact VARCHAR(255);
 ALTER TABLE receipts ADD COLUMN IF NOT EXISTS warehouse_id INTEGER;
 ALTER TABLE receipts ADD COLUMN IF NOT EXISTS location_id INTEGER;
 ALTER TABLE receipts ADD COLUMN IF NOT EXISTS schedule_date DATE;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS source_document VARCHAR(255);
 ALTER TABLE receipts ADD COLUMN IF NOT EXISTS responsible_user_id INTEGER;
 ALTER TABLE receipts ADD COLUMN IF NOT EXISTS reference_code VARCHAR(64);
 ALTER TABLE receipts ADD COLUMN IF NOT EXISTS created_by INTEGER;
@@ -228,6 +247,8 @@ ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_address VARCHAR(500);
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS warehouse_id INTEGER;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS location_id INTEGER;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS schedule_date DATE;
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS source_document VARCHAR(255);
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS operation_type VARCHAR(100);
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS responsible_user_id INTEGER;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS reference_code VARCHAR(64);
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS created_by INTEGER;
@@ -243,3 +264,53 @@ END $$;
 -- inventory_movements
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference_code VARCHAR(64);
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS contact VARCHAR(255);
+
+-- operation_sequences
+CREATE TABLE IF NOT EXISTS operation_sequences (
+    id SERIAL PRIMARY KEY,
+    warehouse_id INTEGER REFERENCES warehouses(id) ON DELETE CASCADE,
+    operation_type VARCHAR(20) NOT NULL,
+    current_value INTEGER DEFAULT 0,
+    prefix VARCHAR(32),
+    UNIQUE(warehouse_id, operation_type)
+);
+
+-- products
+ALTER TABLE products ADD COLUMN IF NOT EXISTS per_unit_cost NUMERIC(12, 2) DEFAULT 0;
+
+-- adjustments
+ALTER TABLE adjustments ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE adjustments ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- adjustment_items
+ALTER TABLE adjustment_items ADD COLUMN IF NOT EXISTS uom VARCHAR(50);
+
+-- receipt_items: support demand/done quantities
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'receipt_items' AND column_name = 'quantity'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'receipt_items' AND column_name = 'demand_qty'
+  ) THEN
+    ALTER TABLE receipt_items RENAME COLUMN quantity TO demand_qty;
+  END IF;
+END $$;
+ALTER TABLE receipt_items ADD COLUMN IF NOT EXISTS demand_qty INTEGER;
+ALTER TABLE receipt_items ADD COLUMN IF NOT EXISTS done_qty INTEGER DEFAULT 0;
+
+-- delivery_items: support demand/done quantities
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'delivery_items' AND column_name = 'quantity'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'delivery_items' AND column_name = 'demand_qty'
+  ) THEN
+    ALTER TABLE delivery_items RENAME COLUMN quantity TO demand_qty;
+  END IF;
+END $$;
+ALTER TABLE delivery_items ADD COLUMN IF NOT EXISTS demand_qty INTEGER;
+ALTER TABLE delivery_items ADD COLUMN IF NOT EXISTS done_qty INTEGER DEFAULT 0;

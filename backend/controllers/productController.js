@@ -11,12 +11,12 @@ exports.getProducts = async (req, res) => {
 };
 
 exports.createProduct = async (req, res) => {
-  const { name, sku, category, unit, reorder_level } = req.body;
+  const { name, sku, category, unit, per_unit_cost, reorder_level } = req.body;
 
   try {
     const newProduct = await db.query(
-      'INSERT INTO products (name, sku, category, unit, reorder_level) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [name, sku, category, unit, reorder_level || 0]
+      'INSERT INTO products (name, sku, category, unit, per_unit_cost, reorder_level) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [name, sku, category, unit, per_unit_cost || 0, reorder_level || 0]
     );
     res.status(201).json(newProduct.rows[0]);
   } catch (err) {
@@ -27,12 +27,12 @@ exports.createProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, sku, category, unit, reorder_level } = req.body;
+  const { name, sku, category, unit, per_unit_cost, reorder_level } = req.body;
 
   try {
     const updatedProduct = await db.query(
-      'UPDATE products SET name = $1, sku = $2, category = $3, unit = $4, reorder_level = $5 WHERE id = $6 RETURNING *',
-      [name, sku, category, unit, reorder_level, id]
+      'UPDATE products SET name = $1, sku = $2, category = $3, unit = $4, per_unit_cost = $5, reorder_level = $6 WHERE id = $7 RETURNING *',
+      [name, sku, category, unit, per_unit_cost || 0, reorder_level, id]
     );
     res.json(updatedProduct.rows[0]);
   } catch (err) {
