@@ -80,27 +80,30 @@ const StockLedger = () => {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">Stock Ledger</h2>
-        <button className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="ci-page-title">Stock Ledger</h2>
+          <p className="text-sm text-slate-500 mt-1">Trace every stock movement across all operations.</p>
+        </div>
+        <button className="ci-button-ghost gap-2">
           <Download size={18} /> Export CSV
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="ci-card overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
               placeholder="Search movement history..." 
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              className="ci-input pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+          <button className="ci-button-ghost gap-2">
             <Filter size={18} /> Filter by Type
           </button>
         </div>
@@ -108,15 +111,15 @@ const StockLedger = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date & Time</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Reference</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Contact</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Product</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Type</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Quantity</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Source</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Destination</th>
+              <tr className="ci-table-head border-b border-slate-100">
+                <th className="px-6 py-4 font-semibold">Date & Time</th>
+                <th className="px-6 py-4 font-semibold">Reference</th>
+                <th className="px-6 py-4 font-semibold">Contact</th>
+                <th className="px-6 py-4 font-semibold">Product</th>
+                <th className="px-6 py-4 font-semibold">Type</th>
+                <th className="px-6 py-4 font-semibold">Quantity</th>
+                <th className="px-6 py-4 font-semibold">Source</th>
+                <th className="px-6 py-4 font-semibold">Destination</th>
               </tr>
             </thead>
             <tbody>

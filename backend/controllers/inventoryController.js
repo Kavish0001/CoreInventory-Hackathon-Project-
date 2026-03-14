@@ -538,3 +538,93 @@ exports.listDeliveries = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
+exports.getReceipt = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const receipt = await db.query(
+      `SELECT r.*, w.name AS warehouse_name, l.location_name
+       FROM receipts r
+       LEFT JOIN warehouses w ON r.warehouse_id = w.id
+       LEFT JOIN inventory_locations l ON r.location_id = l.id
+       WHERE r.id = $1`,
+      [id]
+    );
+    if (receipt.rows.length === 0) return res.status(404).json({ message: 'Receipt not found' });
+
+    const items = await db.query(
+      `SELECT ri.product_id, ri.quantity, p.name AS product_name, p.sku
+       FROM receipt_items ri
+       JOIN products p ON p.id = ri.product_id
+       WHERE ri.receipt_id = $1
+       ORDER BY ri.id ASC`,
+      [id]
+    );
+
+    res.json({ receipt: receipt.rows[0], items: items.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+};
+
+exports.getDelivery = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const delivery = await db.query(
+      `SELECT d.*, w.name AS warehouse_name, l.location_name
+       FROM deliveries d
+       LEFT JOIN warehouses w ON d.warehouse_id = w.id
+       LEFT JOIN inventory_locations l ON d.location_id = l.id
+       WHERE d.id = $1`,
+      [id]
+    );
+    if (delivery.rows.length === 0) return res.status(404).json({ message: 'Delivery not found' });
+
+    const items = await db.query(
+      `SELECT di.product_id, di.quantity, p.name AS product_name, p.sku
+       FROM delivery_items di
+       JOIN products p ON p.id = di.product_id
+       WHERE di.delivery_id = $1
+       ORDER BY di.id ASC`,
+      [id]
+    );
+
+    res.json({ delivery: delivery.rows[0], items: items.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+};
+
+exports.getMoveHistory = async (req, res) => {
+  const q = (req.query.q || '').trim();
+
+  try {
+    const rows = await db.query(
+      `SELECT im.id, im.type, im.quantity, im.reference_code, im.contact, im.created_at,
+              p.name AS product_name, p.sku,
+              sl.location_name AS source_location,
+              dl.location_name AS destination_location
+       FROM inventory_movements im
+       JOIN products p ON p.id = im.product_id
+       LEFT JOIN inventory_locations sl ON sl.id = im.source_location_id
+       LEFT JOIN inventory_locations dl ON dl.id = im.destination_location_id
+       WHERE ($1 = '' OR im.reference_code ILIKE '%' || $1 || '%' OR COALESCE(im.contact,'') ILIKE '%' || $1 || '%' OR p.name ILIKE '%' || $1 || '%' OR p.sku ILIKE '%' || $1 || '%')
+       ORDER BY im.created_at DESC`,
+      [q]
+    );
+
+    // Add signed quantity for easy UI coloring (IN:+, OUT:-)
+    const mapped = rows.rows.map((r) => ({
+      ...r,
+      signed_quantity: ['DELIVERY'].includes(r.type) ? -Number(r.quantity) : Number(r.quantity),
+      direction: ['DELIVERY'].includes(r.type) ? 'OUT' : 'IN',
+    }));
+
+    res.json(mapped);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+};

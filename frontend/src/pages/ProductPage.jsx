@@ -52,6 +52,14 @@ const ProductPage = () => {
     const q = searchTerm.toLowerCase();
     return product.name.toLowerCase().includes(q) || product.sku.toLowerCase().includes(q);
   });
+  const productRows = filteredProducts.map((product) => {
+    const snap = stockByProductId.get(Number(product.id));
+    const onHand = Number(snap?.on_hand ?? 0);
+    let status = 'in_stock';
+    if (onHand <= 0) status = 'out_of_stock';
+    else if (onHand < Number(product.reorder_level || 0)) status = 'low_stock';
+    return { ...product, onHand, status };
+  });
   let tableBodyContent;
 
   if (loading) {
@@ -67,57 +75,50 @@ const ProductPage = () => {
       </tr>
     );
   } else {
-    tableBodyContent = filteredProducts.map(product => (
-      (() => {
-        const snap = stockByProductId.get(Number(product.id));
-        const onHand = Number(snap?.on_hand ?? 0);
-        let status = 'in_stock';
-        if (onHand <= 0) status = 'out_of_stock';
-        else if (onHand < Number(product.reorder_level || 0)) status = 'low_stock';
-
-        return (
-      <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
-        <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
-        <td className="px-6 py-4 text-gray-600">{product.sku}</td>
-        <td className="px-6 py-4 text-gray-600">{product.category}</td>
-        <td className="px-6 py-4 text-gray-600">{onHand}</td>
-        <td className="px-6 py-4 text-gray-600">{product.unit}</td>
+    tableBodyContent = productRows.map(product => (
+      <tr key={product.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+        <td className="px-6 py-4 font-semibold text-slate-900">{product.name}</td>
+        <td className="px-6 py-4 text-slate-600">{product.sku}</td>
+        <td className="px-6 py-4 text-slate-600">{product.category}</td>
+        <td className="px-6 py-4 text-slate-700 font-medium">{product.onHand}</td>
+        <td className="px-6 py-4 text-slate-600">{product.unit}</td>
         <td className="px-6 py-4">
-          <span className={stockBadge(status)}>
-            {status === 'in_stock' ? 'In Stock' : status === 'low_stock' ? 'Low Stock' : 'Out of Stock'}
+          <span className={stockBadge(product.status)}>
+            {product.status === 'in_stock' ? 'In Stock' : product.status === 'low_stock' ? 'Low Stock' : 'Out of Stock'}
           </span>
         </td>
         <td className="px-6 py-4 text-right">
-          <button className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+          <button className="ci-button-ghost py-1.5">Edit</button>
         </td>
       </tr>
-        );
-      })()
     ));
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">Products</h2>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="ci-page-title">Product Management</h2>
+          <p className="text-sm text-slate-500 mt-1">Track product status, stock levels, and quick edits.</p>
+        </div>
+        <button className="ci-button-primary gap-2">
           <Plus size={20} /> Add Product
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="ci-card overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
               placeholder="Search by name or SKU..." 
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              className="ci-input pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+          <button className="ci-button-ghost gap-2">
             <Filter size={18} /> Filters
           </button>
         </div>
@@ -125,14 +126,14 @@ const ProductPage = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Product Name</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">SKU</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Category</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">On hand</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">UoM</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Status</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600 text-right">Actions</th>
+              <tr className="ci-table-head border-b border-slate-100">
+                <th className="px-6 py-4 font-semibold">Product Name</th>
+                <th className="px-6 py-4 font-semibold">SKU</th>
+                <th className="px-6 py-4 font-semibold">Category</th>
+                <th className="px-6 py-4 font-semibold">On hand</th>
+                <th className="px-6 py-4 font-semibold">UoM</th>
+                <th className="px-6 py-4 font-semibold">Status</th>
+                <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody>

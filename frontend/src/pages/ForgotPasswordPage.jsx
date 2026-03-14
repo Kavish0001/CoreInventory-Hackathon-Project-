@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { KeyRound } from 'lucide-react';
@@ -9,6 +10,11 @@ const cx = (...parts) => parts.filter(Boolean).join(' ');
 const RuleItem = ({ ok, children }) => (
   <li className={cx('text-xs', ok ? 'text-green-700' : 'text-gray-500')}>{children}</li>
 );
+
+RuleItem.propTypes = {
+  ok: PropTypes.bool.isRequired,
+  children: PropTypes.node.isRequired
+};
 
 const ForgotPasswordPage = () => {
   const { forgotPassword, resetPassword } = useAuth();
@@ -67,26 +73,32 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
-            <KeyRound className="w-8 h-8 text-blue-600" /> Reset password
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Uses local reset codes (no email/SMS provider)
-          </p>
+    <div className="min-h-screen grid place-items-center p-4">
+      <div className="ci-shell w-full max-w-5xl grid md:grid-cols-2 overflow-hidden">
+        <div className="hidden md:flex flex-col justify-between bg-violet-700 p-10 text-white">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-violet-200">CoreInventory</p>
+            <h2 className="mt-4 text-3xl font-semibold leading-tight">Recover account access securely</h2>
+            <p className="mt-4 text-sm text-violet-100">Generate a local reset code and update your password with policy checks enabled.</p>
+          </div>
+          <div className="text-xs text-violet-200">No third-party service required for development reset flow.</div>
         </div>
 
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">{error}</div>}
-        {info && <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative">{info}</div>}
+        <div className="p-8 sm:p-10">
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <KeyRound className="w-6 h-6 text-violet-700" /> Reset password
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">Request code and set a new secure password</p>
 
-        {step === 'request' ? (
-          <form className="space-y-4" onSubmit={handleRequest}>
+          {error && <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+          {info && <div className="mt-6 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">{info}</div>}
+
+          {step === 'request' ? (
+            <form className="mt-6 space-y-4" onSubmit={handleRequest}>
             <input
               type="email"
               required
-              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="ci-input"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -99,17 +111,17 @@ const ForgotPasswordPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="ci-button-primary w-full py-2.5"
             >
               {loading ? 'Generating...' : 'Generate reset code'}
             </button>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={handleReset}>
+            <form className="mt-6 space-y-4" onSubmit={handleReset}>
             <input
               type="email"
               required
-              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="ci-input"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -122,7 +134,7 @@ const ForgotPasswordPage = () => {
             <input
               type="text"
               required
-              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="ci-input"
               placeholder="Reset code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -130,7 +142,7 @@ const ForgotPasswordPage = () => {
             <input
               type="password"
               required
-              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="ci-input"
               placeholder="New password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -153,16 +165,17 @@ const ForgotPasswordPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="ci-button-primary w-full py-2.5"
             >
               {loading ? 'Updating...' : 'Update password'}
             </button>
           </form>
         )}
 
-        <p className="text-center text-sm text-gray-600">
-          <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium">Back to login</Link>
-        </p>
+          <p className="mt-6 text-center text-sm text-slate-600">
+            <Link to="/login" className="text-violet-700 hover:text-violet-800 font-medium">Back to login</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

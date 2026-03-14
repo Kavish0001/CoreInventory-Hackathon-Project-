@@ -172,11 +172,14 @@ const OperationsPage = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-8">Inventory Operations</h2>
+    <div className="max-w-5xl mx-auto space-y-4">
+      <div>
+        <h2 className="ci-page-title">Inventory Operations</h2>
+        <p className="text-sm text-slate-500 mt-1">Create receipts, validate deliveries, transfer inventory, and run stock adjustments.</p>
+      </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex border-b border-gray-100">
+      <div className="ci-card overflow-hidden">
+        <div className="flex border-b border-slate-100 bg-slate-50/60">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -185,7 +188,7 @@ const OperationsPage = () => {
                 setMessage(null);
               }}
               className={`flex-1 py-4 flex items-center justify-center gap-2 font-medium transition-colors ${
-                activeTab === tab.id ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'
+                activeTab === tab.id ? 'bg-white text-violet-700 border-b-2 border-violet-700' : 'text-slate-500 hover:bg-white/70'
               }`}
             >
               {tab.icon} {tab.name}
@@ -196,7 +199,7 @@ const OperationsPage = () => {
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {message && (
             <div className={`p-4 rounded-lg border ${
-              message.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
+              message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'
             }`}>
               {message.text}
             </div>
@@ -210,7 +213,7 @@ const OperationsPage = () => {
                   id="supplier"
                   type="text"
                   required
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="ci-input"
                   value={formData.supplier}
                   onChange={e => setFormData({ ...formData, supplier: e.target.value })}
                 />
@@ -224,7 +227,7 @@ const OperationsPage = () => {
                   id="customer"
                   type="text"
                   required
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="ci-input"
                   value={formData.customer}
                   onChange={e => setFormData({ ...formData, customer: e.target.value })}
                 />
@@ -236,7 +239,7 @@ const OperationsPage = () => {
               <select
                 id="product_id"
                 required
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="ci-input"
                 value={formData.product_id}
                 onChange={e => setFormData({ ...formData, product_id: e.target.value })}
               >
@@ -252,7 +255,7 @@ const OperationsPage = () => {
               <select
                 id="warehouse_id"
                 required
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="ci-input"
                 value={formData.warehouse_id}
                 onChange={e => setFormData({ ...formData, warehouse_id: e.target.value })}
               >
@@ -268,7 +271,7 @@ const OperationsPage = () => {
               <select
                 id="location_id"
                 required
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="ci-input"
                 value={formData.location_id}
                 onChange={e => setFormData({ ...formData, location_id: e.target.value })}
                 disabled={!formData.warehouse_id}
@@ -286,7 +289,7 @@ const OperationsPage = () => {
                   type="number"
                   required
                   min="1"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="ci-input"
                   value={formData.quantity}
                   onChange={e => setFormData({ ...formData, quantity: e.target.value })}
                 />
@@ -301,7 +304,7 @@ const OperationsPage = () => {
                   type="number"
                   required
                   min="0"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="ci-input"
                   value={formData.counted_quantity}
                   onChange={e => setFormData({ ...formData, counted_quantity: e.target.value })}
                 />
@@ -311,14 +314,14 @@ const OperationsPage = () => {
             {activeTab === 'transfer' && (
               <>
                 <div className="col-span-2 border-t border-gray-100 pt-4 mt-2">
-                  <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wider">Destination Details</h4>
+                  <h4 className="font-semibold text-slate-900 mb-4 text-sm uppercase tracking-wider">Destination Details</h4>
                 </div>
                 <div>
                   <label htmlFor="dest_warehouse_id" className="block text-sm font-medium text-gray-700 mb-1">Destination Warehouse</label>
                   <select
                     id="dest_warehouse_id"
                     required
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="ci-input"
                     value={formData.dest_warehouse_id}
                     onChange={e => setFormData({ ...formData, dest_warehouse_id: e.target.value })}
                   >
@@ -331,7 +334,7 @@ const OperationsPage = () => {
                   <select
                     id="dest_location_id"
                     required
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="ci-input"
                     value={formData.dest_location_id}
                     onChange={e => setFormData({ ...formData, dest_location_id: e.target.value })}
                     disabled={!formData.dest_warehouse_id}
@@ -350,7 +353,7 @@ const OperationsPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+              className="ci-button-primary w-full py-3"
             >
               {loading ? 'Processing...' : `Submit ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
             </button>

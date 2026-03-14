@@ -146,6 +146,44 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+exports.verifyOTP = async (req, res) => {
+  const { email, code } = req.body;
+
+  const identifier = (email || '').trim();
+  const resetCode = (code || '').trim();
+
+  if (!identifier) return res.status(400).json({ message: 'Email is required' });
+  if (!resetCode) return res.status(400).json({ message: 'Reset code is required' });
+
+  try {
+    const user = await db.query('SELECT id FROM users WHERE email = $1', [identifier.toLowerCase()]);
+    if (user.rows.length === 0) return res.status(400).json({ message: 'Invalid reset code' });
+
+    const codeRow = await db.query(
+      `SELECT id, code_hash, expires_at
+       FROM password_reset_codes
+       WHERE user_id = $1 AND used_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [user.rows[0].id]
+    );
+
+    if (codeRow.rows.length === 0) return res.status(400).json({ message: 'Invalid reset code' });
+
+    const { code_hash: codeHash, expires_at: expiresAt } = codeRow.rows[0];
+    if (new Date(expiresAt).getTime() < Date.now()) return res.status(400).json({ message: 'Reset code expired' });
+
+    const isMatch = await bcrypt.compare(resetCode, codeHash);
+    if (!isMatch) return res.status(400).json({ message: 'Invalid reset code' });
+
+    return res.json({ message: 'OTP verified' });
+  } catch (err) {
+    console.error(err);
+    const isProduction = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: isProduction ? 'Server error' : (err.message || 'Server error') });
+  }
+};
+
 exports.resetPassword = async (req, res) => {
   const { email, code, new_password } = req.body;
 

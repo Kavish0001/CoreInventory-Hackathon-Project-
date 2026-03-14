@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
@@ -9,6 +10,11 @@ const cx = (...parts) => parts.filter(Boolean).join(' ');
 const RuleItem = ({ ok, children }) => (
   <li className={cx('text-xs', ok ? 'text-green-700' : 'text-gray-500')}>{children}</li>
 );
+
+RuleItem.propTypes = {
+  ok: PropTypes.bool.isRequired,
+  children: PropTypes.node.isRequired
+};
 
 const SignUpPage = () => {
   const [form, setForm] = useState({ name: '', login_id: '', email: '', password: '', confirm: '' });
@@ -72,25 +78,31 @@ const SignUpPage = () => {
     form.password === form.confirm;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
-            <UserPlus className="w-8 h-8 text-blue-600" /> Create account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Minimal local auth (no 3rd-party APIs)
-          </p>
+    <div className="min-h-screen grid place-items-center p-4">
+      <div className="ci-shell w-full max-w-5xl grid md:grid-cols-2 overflow-hidden">
+        <div className="hidden md:flex flex-col justify-between bg-violet-700 p-10 text-white">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-violet-200">CoreInventory</p>
+            <h2 className="mt-4 text-3xl font-semibold leading-tight">Create your workspace account</h2>
+            <p className="mt-4 text-sm text-violet-100">Start tracking products, receipts, transfers and deliveries with a single unified dashboard.</p>
+          </div>
+          <div className="text-xs text-violet-200">Fast setup. Role based access. Unified stock visibility.</div>
         </div>
 
-        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+        <div className="p-8 sm:p-10">
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <UserPlus className="w-6 h-6 text-violet-700" /> Create account
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">Set up your profile and continue to dashboard</p>
+
+          <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
           {info && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative">
+            <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
               {info}
             </div>
           )}
@@ -98,14 +110,14 @@ const SignUpPage = () => {
           <input
             type="text"
             required
-            className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="ci-input"
             placeholder="Name"
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
           />
           <input
             type="text"
-            className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="ci-input"
             placeholder="Login ID (6-12 chars)"
             value={form.login_id}
             onChange={(e) => setForm((p) => ({ ...p, login_id: e.target.value }))}
@@ -118,7 +130,7 @@ const SignUpPage = () => {
           <input
             type="email"
             required
-            className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="ci-input"
             placeholder="Email"
             value={form.email}
             onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
@@ -131,7 +143,7 @@ const SignUpPage = () => {
           <input
             type="password"
             required
-            className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="ci-input"
             placeholder="Password"
             value={form.password}
             onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
@@ -149,7 +161,7 @@ const SignUpPage = () => {
           <input
             type="password"
             required
-            className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="ci-input"
             placeholder="Re-enter password"
             value={form.confirm}
             onChange={(e) => setForm((p) => ({ ...p, confirm: e.target.value }))}
@@ -163,15 +175,16 @@ const SignUpPage = () => {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="ci-button-primary w-full py-2.5"
           >
             {loading ? 'Signing up...' : 'Sign up'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-600">
-          Already have an account? <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium">Sign in</Link>
-        </p>
+          <p className="mt-6 text-center text-sm text-slate-600">
+            Already have an account? <Link to="/login" className="text-violet-700 hover:text-violet-800 font-medium">Sign in</Link>
+          </p>
+        </div>
       </div>
     </div>
   );
