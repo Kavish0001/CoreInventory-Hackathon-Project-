@@ -1,108 +1,97 @@
 import { useEffect, useState } from 'react';
-import { warehouseService } from '../services/api';
-import { Plus, Warehouse, MapPin } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchWarehouses, createWarehouse, selectWarehouses } from '../features/warehouses/warehousesSlice';
+import { DataTable, Modal, FormField, SearchInput } from '../components/ui';
+import { Plus, Warehouse } from 'lucide-react';
+import { format } from 'date-fns';
 
-const WarehousesPage = () => {
-  const [warehouses, setWarehouses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({ name: '', location: '' });
-
-  const loadWarehouses = async () => {
-    try {
-      setLoading(true);
-      const response = await warehouseService.getWarehouses();
-      setWarehouses(response.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load warehouses');
-    } finally {
-      setLoading(false);
-    }
-  };
+export default function WarehousesPage() {
+  const dispatch = useDispatch();
+  const { items, loading } = useSelector(selectWarehouses);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ name: '', short_code: '', address: '' });
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    loadWarehouses();
-  }, []);
+    dispatch(fetchWarehouses());
+  }, [dispatch]);
 
-  const handleCreateWarehouse = async (event) => {
-    event.preventDefault();
-    setError('');
+  const filtered = items.filter((w) =>
+    w.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    w.short_code?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
+  const columns = [
+    { key: 'name', label: 'Warehouse Name', cellClass: 'font-medium text-text-primary' },
+    { key: 'short_code', label: 'Short Code', cellClass: 'font-semibold text-primary uppercase' },
+    { key: 'address', label: 'Address', cellClass: 'text-text-secondary truncate max-w-[250px]' },
+    { key: 'location_count', label: 'Locations', render: (val) => val || 0 },
+    { key: 'created_at', label: 'Created', render: (val) => val ? format(new Date(val), 'MMM dd, yyyy') : '-' },
+  ];
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.short_code) return;
     try {
-      await warehouseService.createWarehouse(formData);
-      setFormData({ name: '', location: '' });
-      await loadWarehouses();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create warehouse');
+      await dispatch(createWarehouse(form)).unwrap();
+      setShowModal(false);
+      setForm({ name: '', short_code: '', address: '' });
+      dispatch(fetchWarehouses());
+    } catch {
+      // ignore
     }
   };
-  let warehouseContent;
-
-  if (loading) {
-    warehouseContent = <div className="p-6 text-slate-500">Loading warehouses...</div>;
-  } else if (warehouses.length === 0) {
-    warehouseContent = <div className="p-6 text-slate-500">No warehouses available.</div>;
-  } else {
-    warehouseContent = (
-      <div className="divide-y divide-slate-100">
-        {warehouses.map((warehouse) => (
-          <div key={warehouse.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
-            <div className="flex items-center gap-3">
-              <Warehouse size={20} className="text-violet-700" />
-              <div>
-                <p className="font-semibold text-slate-900">{warehouse.name}</p>
-                <p className="text-sm text-slate-500">ID: {warehouse.id}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-slate-600">
-              <MapPin size={16} />
-              <span>{warehouse.location || 'N/A'}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="ci-page-title">Warehouses & Locations</h2>
-        <p className="text-sm text-slate-500 mt-1">Manage storage hubs and physical stock locations.</p>
-      </div>
-      <div className="ci-card p-6">
-        <h3 className="text-lg font-semibold mb-4 text-slate-900">Create Warehouse</h3>
-        <form className="grid grid-cols-1 md:grid-cols-3 gap-4" onSubmit={handleCreateWarehouse}>
-          <input
-            type="text"
-            placeholder="Warehouse name"
-            value={formData.name}
-            onChange={(event) => setFormData((previous) => ({ ...previous, name: event.target.value }))}
-            className="ci-input"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Location"
-            value={formData.location}
-            onChange={(event) => setFormData((previous) => ({ ...previous, location: event.target.value }))}
-            className="ci-input"
-            required
-          />
-          <button type="submit" className="ci-button-primary gap-2">
-            <Plus size={18} />
-            Add Warehouse
-          </button>
-        </form>
-        {error && <p className="text-red-600 mt-3 text-sm">{error}</p>}
+    <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">Warehouses</h1>
+          <p className="text-sm text-text-secondary mt-0.5">Manage facilities and short codes</p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm"
+        >
+          <Plus size={18} /> Add Warehouse
+        </button>
       </div>
 
-      <div className="ci-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 font-semibold text-slate-900">Warehouse List</div>
-        {warehouseContent}
+      <div className="bg-card rounded-xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search warehouses..."
+            className="w-full sm:w-80"
+          />
+        </div>
+        <DataTable
+          columns={columns}
+          data={filtered}
+          loading={loading}
+          emptyMessage="No warehouses configured."
+          icon={Warehouse}
+        />
       </div>
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="New Warehouse">
+        <form onSubmit={handleCreate} className="space-y-4">
+          <FormField label="Warehouse Name" required htmlFor="wh-name">
+            <input id="wh-name" type="text" required className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </FormField>
+          <FormField label="Short Code" required htmlFor="wh-code">
+            <input id="wh-code" type="text" required maxLength={5} placeholder="e.g. WH, NY, MAIN" className="w-full px-3 py-2 text-sm uppercase border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" value={form.short_code} onChange={(e) => setForm({ ...form, short_code: e.target.value.toUpperCase() })} />
+          </FormField>
+          <FormField label="Address" htmlFor="wh-addr">
+            <textarea id="wh-addr" rows={3} className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none resize-none" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          </FormField>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm rounded-lg border border-border text-text-secondary hover:bg-gray-50 transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium">Create</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
-};
-
-export default WarehousesPage;
+}

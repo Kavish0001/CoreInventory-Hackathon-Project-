@@ -1,88 +1,76 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { AuthProvider } from './context/AuthContext';
-import { useAuth } from './hooks/useAuth';
-import Layout from './components/Layout';
+import { Provider, useSelector } from 'react-redux';
+import store from './app/store';
+import { selectAuth } from './features/auth/authSlice';
+import AppLayout from './components/layout/AppLayout';
+
+// Pages
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import Dashboard from './pages/Dashboard';
-import ProductPage from './pages/ProductPage';
-import OperationsPage from './pages/OperationsPage';
-import Stock from './pages/Stock';
-import StockLedger from './pages/StockLedger';
+import ProductsPage from './pages/ProductsPage';
+import StockPage from './pages/StockPage';
+import ReceiptsList from './pages/ReceiptsList';
+import ReceiptDetail from './pages/ReceiptDetail';
+import DeliveriesList from './pages/DeliveriesList';
+import DeliveryDetail from './pages/DeliveryDetail';
+import TransfersList from './pages/TransfersList';
+import MoveHistory from './pages/MoveHistory';
 import WarehousesPage from './pages/WarehousesPage';
-import Receipts from './pages/Receipts';
-import Deliveries from './pages/Deliveries';
+import LocationsPage from './pages/LocationsPage';
+import SettingsPage from './pages/SettingsPage';
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" />;
-  
-  return <Layout>{children}</Layout>;
-};
+// Protected Route
+// eslint-disable-next-line react/prop-types
+function ProtectedRoute({ children }) {
+  const { user } = useSelector(selectAuth);
+  if (!user) return <Navigate to="/login" replace />;
+  return <AppLayout>{children}</AppLayout>;
+}
 
 ProtectedRoute.propTypes = {
-  children: PropTypes.node.isRequired
+  children: PropTypes.node.isRequired,
 };
 
-function App() {
+function AppRoutes() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/products" element={
-            <ProtectedRoute>
-              <ProductPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/operations" element={
-            <ProtectedRoute>
-              <OperationsPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/stock" element={
-            <ProtectedRoute>
-              <Stock />
-            </ProtectedRoute>
-          } />
-          <Route path="/ledger" element={
-            <ProtectedRoute>
-              <StockLedger />
-            </ProtectedRoute>
-          } />
-          <Route path="/warehouses" element={
-            <ProtectedRoute>
-              <WarehousesPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/receipts" element={
-            <ProtectedRoute>
-              <Receipts />
-            </ProtectedRoute>
-          } />
-          <Route path="/deliveries" element={
-            <ProtectedRoute>
-              <Deliveries />
-            </ProtectedRoute>
-          } />
-          {/* Fallback for other routes */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <Routes>
+      {/* Public */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+      {/* Protected */}
+      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
+      <Route path="/stock" element={<ProtectedRoute><StockPage /></ProtectedRoute>} />
+      
+      <Route path="/receipts" element={<ProtectedRoute><ReceiptsList /></ProtectedRoute>} />
+      <Route path="/receipts/:id" element={<ProtectedRoute><ReceiptDetail /></ProtectedRoute>} />
+      
+      <Route path="/deliveries" element={<ProtectedRoute><DeliveriesList /></ProtectedRoute>} />
+      <Route path="/deliveries/:id" element={<ProtectedRoute><DeliveryDetail /></ProtectedRoute>} />
+      
+      <Route path="/transfers" element={<ProtectedRoute><TransfersList /></ProtectedRoute>} />
+      <Route path="/move-history" element={<ProtectedRoute><MoveHistory /></ProtectedRoute>} />
+      <Route path="/warehouses" element={<ProtectedRoute><WarehousesPage /></ProtectedRoute>} />
+      <Route path="/locations" element={<ProtectedRoute><LocationsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Provider store={store}>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </Provider>
+  );
+}
