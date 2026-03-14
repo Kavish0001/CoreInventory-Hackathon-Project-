@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: CoreInventory-Hackathon-Project-/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: CoreInventory-Hackathon-Project-/backend/package-lock.json
+      - run: npm ci
+      - run: node --check index.js
+      - run: node --check controllers/authController.js
+      - run: node --check controllers/inventoryController.js
+      - run: node --check controllers/reportController.js
+
+  frontend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: CoreInventory-Hackathon-Project-/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: CoreInventory-Hackathon-Project-/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+

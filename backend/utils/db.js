@@ -1,8 +1,8 @@
 const { Pool } = require('pg');
-const dotenv = require('dotenv');
 const { getConfig } = require('./env');
+const { loadEnv } = require('./loadEnv');
 
-dotenv.config();
+loadEnv();
 
 const config = getConfig();
 

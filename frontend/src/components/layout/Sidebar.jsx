@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, selectAuth } from '../../features/auth/authSlice';
@@ -18,6 +19,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { ROLES } from '../../utils/rbac';
 
 const NAV_SECTIONS = [
   {
@@ -28,30 +30,30 @@ const NAV_SECTIONS = [
   {
     title: 'INVENTORY',
     items: [
-      { label: 'Receipts', icon: ArrowDownCircle, to: '/receipts' },
-      { label: 'Delivery Orders', icon: ArrowUpCircle, to: '/deliveries' },
-      { label: 'Internal Transfers', icon: Repeat, to: '/transfers' },
+      { label: 'Receipts', icon: ArrowDownCircle, to: '/receipts', roles: [ROLES.INVENTORY_MANAGER] },
+      { label: 'Delivery Orders', icon: ArrowUpCircle, to: '/deliveries', roles: [ROLES.INVENTORY_MANAGER] },
+      { label: 'Internal Transfers', icon: Repeat, to: '/transfers', roles: [ROLES.INVENTORY_MANAGER, ROLES.WAREHOUSE_STAFF] },
     ],
   },
   {
     title: 'MASTER DATA',
     items: [
-      { label: 'Products', icon: Package, to: '/products' },
-      { label: 'Stock', icon: Boxes, to: '/stock' },
+      { label: 'Products', icon: Package, to: '/products', roles: [ROLES.INVENTORY_MANAGER] },
+      { label: 'Stock', icon: Boxes, to: '/stock', roles: [ROLES.INVENTORY_MANAGER, ROLES.WAREHOUSE_STAFF] },
     ],
   },
   {
     title: 'REPORTING',
     items: [
-      { label: 'Move History', icon: BarChart3, to: '/move-history' },
+      { label: 'Move History', icon: BarChart3, to: '/move-history', roles: [ROLES.INVENTORY_MANAGER, ROLES.WAREHOUSE_STAFF] },
     ],
   },
   {
     title: 'SETTINGS',
     items: [
-      { label: 'Warehouses', icon: Warehouse, to: '/warehouses' },
-      { label: 'Locations', icon: MapPin, to: '/locations' },
-      { label: 'Configuration', icon: Settings, to: '/settings' },
+      { label: 'Warehouses', icon: Warehouse, to: '/warehouses', roles: [ROLES.INVENTORY_MANAGER] },
+      { label: 'Locations', icon: MapPin, to: '/locations', roles: [ROLES.INVENTORY_MANAGER] },
+      { label: 'Configuration', icon: Settings, to: '/settings', roles: [ROLES.INVENTORY_MANAGER] },
     ],
   },
 ];
@@ -92,34 +94,39 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-        {NAV_SECTIONS.map((section) => (
-          <div key={section.title || 'Dashboard'}>
-            {section.title && !collapsed && (
-              <p className="px-3 mb-1.5 text-[10px] font-semibold text-sidebar-text/50 uppercase tracking-widest">
-                {section.title}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-sidebar-active text-sidebar-text-active'
-                        : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active'
-                    } ${collapsed ? 'justify-center' : ''}`
-                  }
-                >
-                  <item.icon size={18} className="shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
-                </NavLink>
-              ))}
+        {NAV_SECTIONS.map((section) => {
+          const visibleItems = section.items.filter((item) => !item.roles || item.roles.includes(user?.role));
+          if (visibleItems.length === 0) return null;
+
+          return (
+            <div key={section.title || 'Dashboard'}>
+              {section.title && !collapsed && (
+                <p className="px-3 mb-1.5 text-[10px] font-semibold text-sidebar-text/50 uppercase tracking-widest">
+                  {section.title}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {visibleItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-sidebar-active text-sidebar-text-active'
+                          : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active'
+                      } ${collapsed ? 'justify-center' : ''}`
+                    }
+                  >
+                    <item.icon size={18} className="shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </NavLink>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* User section */}

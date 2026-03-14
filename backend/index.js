@@ -1,13 +1,13 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const requestId = require('./middleware/requestId');
 const errorHandler = require('./middleware/errorHandler');
 const { getConfig } = require('./utils/env');
+const { loadEnv } = require('./utils/loadEnv');
 
-dotenv.config();
+loadEnv();
 
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -18,6 +18,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const app = express();
 const config = getConfig();
 const PORT = config.port;
+console.log('DB connection user:', config.db.user);
 
 app.disable('x-powered-by');
 app.use(requestId);

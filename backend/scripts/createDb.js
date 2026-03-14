@@ -1,7 +1,8 @@
 const { Client } = require('pg');
+const path = require('node:path');
 const dotenv = require('dotenv');
 
-dotenv.config();
+dotenv.config({ override: true, path: path.join(__dirname, '..', '.env') });
 
 async function main() {
   const {

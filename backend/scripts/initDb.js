@@ -1,6 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const dotenv = require('dotenv');
 const db = require('../utils/db');
+
+dotenv.config({ override: true, path: path.join(__dirname, '..', '.env') });
 
 async function main() {
   const schemaPath = path.join(__dirname, '..', '..', 'database', 'schema.sql');

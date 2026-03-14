@@ -21,17 +21,23 @@ import MoveHistory from './pages/MoveHistory';
 import WarehousesPage from './pages/WarehousesPage';
 import LocationsPage from './pages/LocationsPage';
 import SettingsPage from './pages/SettingsPage';
+import NotAuthorized from './pages/NotAuthorized';
+import { ROLES } from './utils/rbac';
 
 // Protected Route
 // eslint-disable-next-line react/prop-types
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, allowedRoles }) {
   const { user } = useSelector(selectAuth);
   if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles?.length && !allowedRoles.includes(user?.role)) {
+    return <AppLayout><NotAuthorized /></AppLayout>;
+  }
   return <AppLayout>{children}</AppLayout>;
 }
 
 ProtectedRoute.propTypes = {
   children: PropTypes.node.isRequired,
+  allowedRoles: PropTypes.arrayOf(PropTypes.string),
 };
 
 function AppRoutes() {
@@ -44,20 +50,20 @@ function AppRoutes() {
 
       {/* Protected */}
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
+      <Route path="/products" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><ProductsPage /></ProtectedRoute>} />
       <Route path="/stock" element={<ProtectedRoute><StockPage /></ProtectedRoute>} />
       
-      <Route path="/receipts" element={<ProtectedRoute><ReceiptsList /></ProtectedRoute>} />
-      <Route path="/receipts/:id" element={<ProtectedRoute><ReceiptDetail /></ProtectedRoute>} />
+      <Route path="/receipts" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><ReceiptsList /></ProtectedRoute>} />
+      <Route path="/receipts/:id" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><ReceiptDetail /></ProtectedRoute>} />
       
-      <Route path="/deliveries" element={<ProtectedRoute><DeliveriesList /></ProtectedRoute>} />
-      <Route path="/deliveries/:id" element={<ProtectedRoute><DeliveryDetail /></ProtectedRoute>} />
+      <Route path="/deliveries" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><DeliveriesList /></ProtectedRoute>} />
+      <Route path="/deliveries/:id" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><DeliveryDetail /></ProtectedRoute>} />
       
       <Route path="/transfers" element={<ProtectedRoute><TransfersList /></ProtectedRoute>} />
       <Route path="/move-history" element={<ProtectedRoute><MoveHistory /></ProtectedRoute>} />
-      <Route path="/warehouses" element={<ProtectedRoute><WarehousesPage /></ProtectedRoute>} />
-      <Route path="/locations" element={<ProtectedRoute><LocationsPage /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/warehouses" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><WarehousesPage /></ProtectedRoute>} />
+      <Route path="/locations" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><LocationsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><SettingsPage /></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
