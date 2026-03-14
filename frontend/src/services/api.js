@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -54,6 +54,8 @@ export const warehouseService = {
 export const inventoryService = {
   listReceipts: (params) => api.get('/inventory/receipts', { params }),
   listDeliveries: (params) => api.get('/inventory/deliveries', { params }),
+  listTransfers: (params) => api.get('/inventory/transfers', { params }),
+  getLocationStock: (params) => api.get('/inventory/stock/by-location', { params }),
   getReceipt: (id) => api.get(`/inventory/receipts/${id}`),
   getDelivery: (id) => api.get(`/inventory/deliveries/${id}`),
   getMoveHistory: (params) => api.get('/inventory/move-history', { params }),

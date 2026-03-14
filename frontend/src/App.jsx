@@ -54,9 +54,11 @@ function AppRoutes() {
       <Route path="/stock" element={<ProtectedRoute><StockPage /></ProtectedRoute>} />
       
       <Route path="/receipts" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><ReceiptsList /></ProtectedRoute>} />
+      <Route path="/receipts/new" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><ReceiptDetail /></ProtectedRoute>} />
       <Route path="/receipts/:id" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><ReceiptDetail /></ProtectedRoute>} />
       
       <Route path="/deliveries" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><DeliveriesList /></ProtectedRoute>} />
+      <Route path="/deliveries/new" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><DeliveryDetail /></ProtectedRoute>} />
       <Route path="/deliveries/:id" element={<ProtectedRoute allowedRoles={[ROLES.INVENTORY_MANAGER]}><DeliveryDetail /></ProtectedRoute>} />
       
       <Route path="/transfers" element={<ProtectedRoute><TransfersList /></ProtectedRoute>} />

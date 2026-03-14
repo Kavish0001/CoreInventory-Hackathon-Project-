@@ -7,6 +7,7 @@
     "start": "node index.js",
     "create-db": "node scripts/createDb.js",
     "init-db": "node scripts/initDb.js",
+    "seed:mock": "node scripts/seedMockData.js",
     "check": "node --check index.js && node --check controllers/authController.js && node --check controllers/inventoryController.js && node --check controllers/reportController.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

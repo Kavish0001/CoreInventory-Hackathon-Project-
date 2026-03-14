@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 
 export default function DeliveryDetail() {
   const { id } = useParams();
-  const isNew = id === 'new';
+  const isNew = !id || id === 'new';
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -25,6 +25,7 @@ export default function DeliveryDetail() {
   const [lines, setLines] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const showDemoFill = import.meta.env.DEV && isNew;
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -37,6 +38,31 @@ export default function DeliveryDetail() {
       dispatch(fetchDelivery(id));
     }
   }, [dispatch, id, isNew]);
+
+  const fillDemo = () => {
+    const wh = warehouses?.[0];
+    const now = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+    const p1 = products?.[0];
+    const p2 = products?.[1] || products?.[0];
+
+    setForm({
+      customer: 'Retailer X',
+      schedule_date: now,
+      source_warehouse_id: wh?.id ? String(wh.id) : '',
+      notes: 'Demo delivery for testing UI flows.',
+    });
+
+    const demoLines = [p1, p2]
+      .filter(Boolean)
+      .map((p, idx) => ({
+        product_id: String(p.id),
+        demand_qty: idx === 0 ? 3 : 2,
+        done_qty: 0,
+        per_unit_cost: p.per_unit_cost || 0,
+      }));
+
+    setLines(demoLines.length ? demoLines : [{ product_id: '', demand_qty: 1, done_qty: 0, per_unit_cost: 0 }]);
+  };
 
   useEffect(() => {
     if (!isNew && currentDelivery?.delivery) {
@@ -185,6 +211,16 @@ export default function DeliveryDetail() {
                   Download
                 </button>
               </>
+            )}
+            {showDemoFill && (
+              <button
+                type="button"
+                onClick={fillDemo}
+                disabled={loading || processing}
+                className="bg-white border border-border hover:bg-gray-50 text-text-secondary px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+              >
+                Fill demo data
+              </button>
             )}
           </div>
           <div className="overflow-x-auto">

@@ -176,6 +176,39 @@ exports.validateReceipt = async (req, res) => {
   } catch (err) {
     await db.query('ROLLBACK');
     console.error(err);
+    const msg = err?.message || 'Server error';
+    if (/^Insufficient stock\b/i.test(msg)) {
+      return res.status(400).json({ message: msg });
+    }
+    res.status(500).json({ message: msg });
+  }
+};
+
+// Stock snapshot by warehouse + location (used by Transfers UI)
+exports.getLocationStock = async (req, res) => {
+  const warehouseId = Number.parseInt(req.query.warehouse_id, 10);
+  const locationId = Number.parseInt(req.query.location_id, 10);
+
+  if (!Number.isFinite(warehouseId) || !Number.isFinite(locationId)) {
+    return res.status(400).json({ message: 'warehouse_id and location_id are required' });
+  }
+
+  try {
+    const rows = await db.query(
+      `SELECT s.product_id, s.quantity, p.name, p.sku, p.per_unit_cost
+       FROM stock s
+       JOIN products p ON p.id = s.product_id
+       WHERE s.warehouse_id = $1 AND s.location_id = $2
+       ORDER BY p.name ASC`,
+      [warehouseId, locationId]
+    );
+    res.json(rows.rows.map((r) => ({
+      ...r,
+      quantity: Number.parseInt(r.quantity, 10) || 0,
+      per_unit_cost: Number(r.per_unit_cost ?? 0),
+    })));
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message || 'Server error' });
   }
 };
@@ -527,6 +560,39 @@ exports.listReceipts = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
+  }
+};
+
+// Transfers list (simple list view for UI)
+exports.listTransfers = async (req, res) => {
+  const q = (req.query.q || '').trim();
+
+  try {
+    const rows = await db.query(
+      `SELECT t.id, t.reference_code, t.status, t.created_at,
+              w.name AS warehouse_name,
+              sl.location_name AS source_location,
+              dl.location_name AS destination_location,
+              u.name AS created_by_name,
+              (SELECT COUNT(*) FROM transfer_items ti WHERE ti.transfer_id = t.id) AS line_count
+       FROM transfers t
+       LEFT JOIN warehouses w ON t.warehouse_id = w.id
+       LEFT JOIN inventory_locations sl ON t.source_location_id = sl.id
+       LEFT JOIN inventory_locations dl ON t.destination_location_id = dl.id
+       LEFT JOIN users u ON t.created_by = u.id
+       WHERE ($1 = '' OR t.reference_code ILIKE '%' || $1 || '%' OR COALESCE(u.name,'') ILIKE '%' || $1 || '%')
+       ORDER BY t.created_at DESC
+       LIMIT 200`,
+      [q]
+    );
+
+    res.json(rows.rows.map((r) => ({
+      ...r,
+      line_count: Number.parseInt(r.line_count, 10) || 0,
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message || 'Server error' });
   }
 };
 

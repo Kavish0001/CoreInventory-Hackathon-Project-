@@ -11,6 +11,7 @@ export default function WarehousesPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', short_code: '', address: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const showDemoFill = import.meta.env.DEV;
 
   useEffect(() => {
     dispatch(fetchWarehouses());
@@ -40,6 +41,15 @@ export default function WarehousesPage() {
     } catch {
       // ignore
     }
+  };
+
+  const fillDemo = () => {
+    const suffix = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
+    setForm({
+      name: `Demo Warehouse ${suffix}`,
+      short_code: `D${suffix}`,
+      address: `Plot ${10 + Number(suffix)}, Industrial Area`,
+    });
   };
 
   return (
@@ -77,6 +87,17 @@ export default function WarehousesPage() {
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="New Warehouse">
         <form onSubmit={handleCreate} className="space-y-4">
+          {showDemoFill && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={fillDemo}
+                className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
+              >
+                Fill demo data
+              </button>
+            </div>
+          )}
           <FormField label="Warehouse Name" required htmlFor="wh-name">
             <input id="wh-name" type="text" required className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </FormField>

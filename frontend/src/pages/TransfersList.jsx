@@ -5,16 +5,22 @@ import FormField from '../components/ui/FormField';
 import Modal from '../components/ui/Modal';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
+import DataTable from '../components/ui/DataTable';
+import SearchInput from '../components/ui/SearchInput';
+import StatusBadge from '../components/ui/StatusBadge';
 
 export default function TransfersList() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(null);
+  const [transfers, setTransfers] = useState([]);
+  const [transferQuery, setTransferQuery] = useState('');
 
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [locationsByWarehouse, setLocationsByWarehouse] = useState({});
+  const [stockByProductId, setStockByProductId] = useState({});
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -23,6 +29,7 @@ export default function TransfersList() {
     destination_location_id: '',
   });
   const [lines, setLines] = useState([{ product_id: '', quantity: 1 }]);
+  const showDemoFill = import.meta.env.DEV;
 
   const sourceLocations = useMemo(() => locationsByWarehouse[form.warehouse_id] || [], [locationsByWarehouse, form.warehouse_id]);
   const destinationLocations = sourceLocations;
@@ -33,14 +40,16 @@ export default function TransfersList() {
       setLoading(true);
       setError('');
       try {
-        const [whRes, prodRes] = await Promise.all([
+        const [whRes, prodRes, transferRes] = await Promise.all([
           warehouseService.getWarehouses(),
           productService.getProducts(),
+          inventoryService.listTransfers({ q: '' }),
         ]);
 
         if (!alive) return;
         setWarehouses(whRes.data || []);
         setProducts(prodRes.data || []);
+        setTransfers(transferRes.data || []);
       } catch (e) {
         if (!alive) return;
         setError(e?.response?.data?.message || e.message || 'Failed to load transfer data');
@@ -51,6 +60,23 @@ export default function TransfersList() {
     load();
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    async function loadTransfers() {
+      try {
+        const res = await inventoryService.listTransfers({ q: transferQuery || '' });
+        if (!alive) return;
+        setTransfers(res.data || []);
+      } catch (e) {
+        if (!alive) return;
+        setError(e?.response?.data?.message || e.message || 'Failed to load transfers');
+      }
+    }
+
+    loadTransfers();
+    return () => { alive = false; };
+  }, [transferQuery]);
 
   useEffect(() => {
     let alive = true;
@@ -71,6 +97,33 @@ export default function TransfersList() {
     return () => { alive = false; };
   }, [form.warehouse_id, locationsByWarehouse]);
 
+  useEffect(() => {
+    let alive = true;
+    async function loadStock() {
+      const warehouseId = form.warehouse_id;
+      const locationId = form.source_location_id;
+      if (!warehouseId || !locationId) {
+        setStockByProductId({});
+        return;
+      }
+      try {
+        const res = await inventoryService.getLocationStock({ warehouse_id: warehouseId, location_id: locationId });
+        if (!alive) return;
+        const map = {};
+        for (const row of res.data || []) {
+          map[String(row.product_id)] = Number(row.quantity) || 0;
+        }
+        setStockByProductId(map);
+      } catch (e) {
+        if (!alive) return;
+        setStockByProductId({});
+      }
+    }
+
+    loadStock();
+    return () => { alive = false; };
+  }, [form.warehouse_id, form.source_location_id]);
+
   const addLine = () => setLines((prev) => [...prev, { product_id: '', quantity: 1 }]);
   const removeLine = (idx) => setLines((prev) => prev.filter((_, i) => i !== idx));
   const updateLine = (idx, field, value) => setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
@@ -81,6 +134,13 @@ export default function TransfersList() {
     const normalized = lines
       .map((l) => ({ product_id: String(l.product_id || '').trim(), quantity: Number(l.quantity) }))
       .filter((l) => l.product_id && Number.isFinite(l.quantity) && l.quantity > 0);
+    // If we have stock loaded, ensure quantities do not exceed availability.
+    if (Object.keys(stockByProductId).length) {
+      for (const l of normalized) {
+        const available = Number(stockByProductId[l.product_id] ?? 0);
+        if (l.quantity > available) return false;
+      }
+    }
     return normalized.length > 0;
   };
 
@@ -89,6 +149,19 @@ export default function TransfersList() {
     setError('');
     setSuccess(null);
     try {
+      if (Object.keys(stockByProductId).length) {
+        const bad = lines.find((l) => {
+          const pid = String(l.product_id || '').trim();
+          if (!pid) return false;
+          const q = Number(l.quantity);
+          const available = Number(stockByProductId[pid] ?? 0);
+          return Number.isFinite(q) && q > available;
+        });
+        if (bad) {
+          throw new Error('Quantity exceeds available stock at source location');
+        }
+      }
+
       const payload = {
         ...form,
         products: lines
@@ -98,6 +171,12 @@ export default function TransfersList() {
 
       const res = await inventoryService.createTransfer(payload);
       setSuccess(res.data);
+      try {
+        const listRes = await inventoryService.listTransfers({ q: transferQuery || '' });
+        setTransfers(listRes.data || []);
+      } catch {
+        // ignore refresh failures
+      }
       setOpen(false);
       setForm({ warehouse_id: '', source_location_id: '', destination_location_id: '' });
       setLines([{ product_id: '', quantity: 1 }]);
@@ -106,6 +185,29 @@ export default function TransfersList() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const fillDemo = () => {
+    const wh = warehouses?.[0];
+    const whId = wh?.id ? String(wh.id) : '';
+    const locs = locationsByWarehouse[whId] || [];
+    const src = locs[0]?.id ? String(locs[0].id) : '';
+    const dst = locs[1]?.id ? String(locs[1].id) : '';
+    // Prefer products that actually have stock at source
+    const inStockIds = Object.entries(stockByProductId)
+      .filter(([, qty]) => Number(qty) > 0)
+      .map(([pid]) => pid);
+    const p1 = products.find((p) => inStockIds.includes(String(p.id))) || products?.[0];
+    const p2 = products.find((p) => String(p.id) !== String(p1?.id) && inStockIds.includes(String(p.id))) || products?.[1] || products?.[0];
+
+    setForm({
+      warehouse_id: whId,
+      source_location_id: src,
+      destination_location_id: dst && dst !== src ? dst : '',
+    });
+    const l1Qty = Math.min(2, Number(stockByProductId[String(p1?.id)] ?? 2) || 1);
+    const l2Qty = Math.min(1, Number(stockByProductId[String(p2?.id)] ?? 1) || 1);
+    setLines([p1, p2].filter(Boolean).map((p, idx) => ({ product_id: String(p.id), quantity: idx === 0 ? l1Qty : l2Qty })));
   };
 
   return (
@@ -175,10 +277,53 @@ export default function TransfersList() {
         </div>
       )}
 
+      {!loading && (
+        <div className="mt-6 bg-card rounded-xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-text-primary">Recent Transfers</h2>
+              <p className="text-xs text-text-muted mt-0.5">Transfers are saved as documents and visible here.</p>
+            </div>
+            <SearchInput
+              value={transferQuery}
+              onChange={setTransferQuery}
+              placeholder="Search by reference or creator..."
+              className="w-full sm:w-72"
+            />
+          </div>
+
+          <DataTable
+            columns={[
+              { key: 'reference_code', label: 'Reference', cellClass: 'font-medium text-primary' },
+              { key: 'warehouse_name', label: 'Warehouse' },
+              { key: 'source_location', label: 'Source' },
+              { key: 'destination_location', label: 'Destination' },
+              { key: 'line_count', label: 'Lines', render: (v) => v ?? 0 },
+              { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
+            ]}
+            data={transfers}
+            loading={false}
+            emptyMessage="No transfers found."
+          />
+        </div>
+      )}
+
       <Modal open={open} onClose={() => setOpen(false)} title="New Internal Transfer" size="lg">
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-danger-light border border-danger/20 text-danger text-sm">
             {error}
+          </div>
+        )}
+
+        {showDemoFill && (
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={fillDemo}
+              className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
+            >
+              Fill demo data
+            </button>
           </div>
         )}
 
@@ -264,7 +409,9 @@ export default function TransfersList() {
                       >
                         <option value="">Select product...</option>
                         {products.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name} [{p.sku}]</option>
+                          <option key={p.id} value={p.id}>
+                            {p.name} [{p.sku}] {form.source_location_id ? `— Avl: ${stockByProductId[String(p.id)] ?? 0}` : ''}
+                          </option>
                         ))}
                       </select>
                     </td>
@@ -276,6 +423,9 @@ export default function TransfersList() {
                         value={line.quantity}
                         onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))}
                       />
+                      {line.product_id && form.source_location_id && Object.keys(stockByProductId).length > 0 && Number(line.quantity) > Number(stockByProductId[String(line.product_id)] ?? 0) && (
+                        <p className="text-xs text-danger mt-1">Not enough stock.</p>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-right">
                       <button
