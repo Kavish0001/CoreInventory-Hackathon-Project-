@@ -8,10 +8,11 @@ import { StatusBadge, StatusBar, Breadcrumb, FormField, LoadingSpinner } from '.
 import ProductLineTable from '../components/features/ProductLineTable';
 import { Save, CheckCircle, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import { warehouseService } from '../services/api';
 
 export default function ReceiptDetail() {
   const { id } = useParams();
-  const isNew = id === 'new';
+  const isNew = !id || id === 'new';
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -19,17 +20,34 @@ export default function ReceiptDetail() {
   const { items: products, loading: productsLoading } = useSelector(selectProducts);
   const { items: warehouses, loading: whLoading } = useSelector(selectWarehouses);
 
-  const [form, setForm] = useState({ supplier: '', schedule_date: '', target_warehouse_id: '', notes: '' });
+  const [locations, setLocations] = useState([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [form, setForm] = useState({
+    supplier: '',
+    contact: '',
+    schedule_date: '',
+    warehouse_id: '',
+    location_id: '',
+    source_document: '',
+  });
   const [lines, setLines] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const showDemoFill = import.meta.env.DEV && isNew;
 
   useEffect(() => {
     dispatch(fetchProducts());
     dispatch(fetchWarehouses());
     if (isNew) {
       dispatch(clearCurrentReceipt());
-      setForm({ supplier: '', schedule_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), target_warehouse_id: '', notes: '' });
+      setForm({
+        supplier: '',
+        contact: '',
+        schedule_date: format(new Date(), 'yyyy-MM-dd'),
+        warehouse_id: '',
+        location_id: '',
+        source_document: '',
+      });
       setLines([]);
     } else {
       dispatch(fetchReceipt(id));
@@ -37,34 +55,106 @@ export default function ReceiptDetail() {
   }, [dispatch, id, isNew]);
 
   useEffect(() => {
+    let alive = true;
+    async function loadLocations() {
+      const warehouseId = form.warehouse_id;
+      if (!warehouseId) {
+        setLocations([]);
+        return;
+      }
+
+      setLocationsLoading(true);
+      try {
+        const res = await warehouseService.getLocations(warehouseId);
+        if (!alive) return;
+        const locs = res.data || [];
+        setLocations(locs);
+
+        // auto-pick STOCK if present, else first location
+        if (!form.location_id) {
+          const stock = locs.find((l) => String(l.short_code || '').toUpperCase() === 'STOCK');
+          const pick = stock || locs[0];
+          if (pick?.id) setForm((p) => ({ ...p, location_id: String(pick.id) }));
+        }
+      } catch {
+        if (!alive) return;
+        setLocations([]);
+      } finally {
+        if (alive) setLocationsLoading(false);
+      }
+    }
+
+    loadLocations();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.warehouse_id]);
+
+  const fillDemo = () => {
+    const wh = warehouses?.[0];
+    const now = format(new Date(), 'yyyy-MM-dd');
+    const p1 = products?.[0];
+    const p2 = products?.[1] || products?.[0];
+
+    setForm({
+      supplier: 'ACME Supplies',
+      contact: 'Vendor',
+      schedule_date: now,
+      warehouse_id: wh?.id ? String(wh.id) : '',
+      location_id: '',
+      source_document: 'PO0042',
+    });
+
+    const demoLines = [p1, p2]
+      .filter(Boolean)
+      .map((p, idx) => ({
+        product_id: String(p.id),
+        demand_qty: idx === 0 ? 12 : 6,
+        done_qty: 0,
+        per_unit_cost: p.per_unit_cost || 0,
+      }));
+
+    setLines(demoLines.length ? demoLines : [{ product_id: '', demand_qty: 1, done_qty: 0, per_unit_cost: 0 }]);
+  };
+
+  useEffect(() => {
     if (!isNew && currentReceipt?.receipt) {
       const r = currentReceipt.receipt;
       setForm({
         supplier: r.supplier || '',
-        schedule_date: r.schedule_date ? format(new Date(r.schedule_date), "yyyy-MM-dd'T'HH:mm") : '',
-        target_warehouse_id: r.target_warehouse_id || '',
-        notes: r.notes || '',
+        contact: r.contact || '',
+        schedule_date: r.schedule_date ? format(new Date(r.schedule_date), 'yyyy-MM-dd') : '',
+        warehouse_id: r.warehouse_id ? String(r.warehouse_id) : '',
+        location_id: r.location_id ? String(r.location_id) : '',
+        source_document: r.source_document || '',
       });
       setLines(currentReceipt.items || []);
     }
   }, [currentReceipt, isNew]);
 
-  const loading = detailLoading || productsLoading || whLoading;
+  const loading = detailLoading || productsLoading || whLoading || locationsLoading;
   const status = isNew ? 'draft' : currentReceipt?.receipt?.status || 'draft';
   const isReadonly = status === 'done' || status === 'cancelled';
   const refCode = isNew ? 'New' : currentReceipt?.receipt?.reference_code || 'Loading...';
 
   const handleCreate = async () => {
-    if (!form.supplier || !form.target_warehouse_id) return setErrorMsg('Supplier and Warehouse are required.');
+    if (!form.supplier || !form.warehouse_id || !form.location_id) return setErrorMsg('Vendor, Warehouse, and Location are required.');
     if (lines.length === 0) return setErrorMsg('Add at least one product.');
     if (lines.some(l => !l.product_id || l.demand_qty <= 0)) return setErrorMsg('Please check product lines. Product and Demand > 0 are required.');
     
     setProcessing(true);
     setErrorMsg('');
     try {
-      const payload = { ...form, items: lines.map(l => ({ ...l, done_qty: l.done_qty || 0 })) };
+      const payload = {
+        supplier: form.supplier,
+        contact: form.contact || null,
+        warehouse_id: Number(form.warehouse_id),
+        location_id: Number(form.location_id),
+        schedule_date: form.schedule_date || null,
+        source_document: form.source_document || null,
+        products: lines.map((l) => ({ product_id: l.product_id, quantity: Number(l.demand_qty) })),
+      };
       const res = await dispatch(createReceipt(payload)).unwrap();
-      navigate(`/receipts/${res.id}`);
+      navigate(`/receipts/${res.receiptId}`);
     } catch (err) {
       setErrorMsg(err);
     } finally {
@@ -135,6 +225,16 @@ export default function ReceiptDetail() {
                 </button>
               </>
             )}
+            {showDemoFill && (
+              <button
+                type="button"
+                onClick={fillDemo}
+                disabled={loading || processing}
+                className="bg-white border border-border hover:bg-gray-50 text-text-secondary px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+              >
+                Fill demo data
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
              <StatusBar steps={['draft', 'ready', 'done']} current={status === 'waiting' ? 'ready' : status} />
@@ -168,17 +268,42 @@ export default function ReceiptDetail() {
                   onChange={e => setForm({ ...form, supplier: e.target.value })}
                 />
               </FormField>
-              <FormField label="Destination Location" required htmlFor="dest">
+              <FormField label="Contact" htmlFor="contact">
+                <input
+                  id="contact"
+                  type="text"
+                  placeholder="e.g. Person / Phone"
+                  disabled={isReadonly}
+                  className="w-full px-3 py-2 text-sm border-b-2 border-border focus:border-primary outline-none bg-transparent disabled:opacity-75 disabled:border-transparent font-medium text-text-primary"
+                  value={form.contact}
+                  onChange={e => setForm({ ...form, contact: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Destination Warehouse" required htmlFor="dest-wh">
                 <select
-                  id="dest"
+                  id="dest-wh"
                   disabled={isReadonly}
                   className="w-full px-3 py-2 text-sm border-b-2 border-border focus:border-primary outline-none bg-transparent disabled:opacity-75 disabled:border-transparent font-medium text-text-primary disabled:appearance-none"
-                  value={form.target_warehouse_id}
-                  onChange={e => setForm({ ...form, target_warehouse_id: e.target.value })}
+                  value={form.warehouse_id}
+                  onChange={e => setForm({ ...form, warehouse_id: e.target.value, location_id: '' })}
                 >
                   <option value="">Select Warehouse...</option>
                   {warehouses.map(w => (
                     <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Destination Location" required htmlFor="dest-loc">
+                <select
+                  id="dest-loc"
+                  disabled={isReadonly || !form.warehouse_id}
+                  className="w-full px-3 py-2 text-sm border-b-2 border-border focus:border-primary outline-none bg-transparent disabled:opacity-60 disabled:border-transparent font-medium text-text-primary disabled:appearance-none"
+                  value={form.location_id}
+                  onChange={e => setForm({ ...form, location_id: e.target.value })}
+                >
+                  <option value="">{form.warehouse_id ? 'Select Location...' : 'Select Warehouse first'}</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.location_name}</option>
                   ))}
                 </select>
               </FormField>
@@ -188,7 +313,7 @@ export default function ReceiptDetail() {
               <FormField label="Scheduled Date" htmlFor="date">
                 <input
                   id="date"
-                  type="datetime-local"
+                  type="date"
                   disabled={isReadonly}
                   className="w-full px-3 py-2 text-sm border-b-2 border-border focus:border-primary outline-none bg-transparent disabled:opacity-75 disabled:border-transparent font-medium text-text-primary text-right"
                   value={form.schedule_date}
@@ -202,8 +327,8 @@ export default function ReceiptDetail() {
                   placeholder="e.g. PO0042"
                   disabled={isReadonly}
                   className="w-full px-3 py-2 text-sm border-b-2 border-border focus:border-primary outline-none bg-transparent disabled:opacity-75 disabled:border-transparent text-right font-medium text-text-primary"
-                  value={form.notes} // using notes as source doc placeholder for now, or you can add source_document to schema
-                  onChange={e => setForm({ ...form, notes: e.target.value })}
+                  value={form.source_document}
+                  onChange={e => setForm({ ...form, source_document: e.target.value })}
                 />
               </FormField>
             </div>

@@ -16,6 +16,7 @@ export default function LocationsPage() {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState({ location_name: '', short_code: '' });
+  const showDemoFill = import.meta.env.DEV;
 
   const selectedWarehouse = useMemo(
     () => warehouses.find((w) => String(w.id) === String(selectedWarehouseId)),
@@ -87,6 +88,10 @@ export default function LocationsPage() {
     } finally {
       setCreating(false);
     }
+  };
+
+  const fillDemo = () => {
+    setCreateForm({ location_name: 'Demo Bin A1', short_code: 'A1' });
   };
 
   return (
@@ -187,6 +192,17 @@ export default function LocationsPage() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Create Location" size="md">
         <div className="space-y-4">
+          {showDemoFill && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={fillDemo}
+                className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
+              >
+                Fill demo data
+              </button>
+            </div>
+          )}
           <FormField label="Warehouse" required>
             <div className="px-3 py-2 rounded-lg border border-border bg-gray-50 text-sm text-text-secondary">
               {selectedWarehouse?.name || 'Select a warehouse first'}
