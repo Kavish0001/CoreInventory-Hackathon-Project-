@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
   }), [user, login, register, forgotPassword, resetPassword, logout, loading]);
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={contextValue}> {/* NOSONAR */}
       {children}
     </AuthContext.Provider>
   );

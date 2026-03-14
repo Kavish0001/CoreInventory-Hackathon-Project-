@@ -14,6 +14,8 @@ import {
   X
 } from 'lucide-react';
 
+const cx = (...parts) => parts.filter(Boolean).join(' ');
+
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -37,9 +39,19 @@ const Layout = ({ children }) => {
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
-      <aside className={`bg-slate-900 text-white transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'} flex flex-col`}>
+      <aside
+        className={cx(
+          'bg-slate-900',
+          'text-white',
+          'transition-all',
+          'duration-300',
+          isSidebarOpen ? 'w-64' : 'w-20',
+          'flex',
+          'flex-col'
+        )}
+      >
         <div className="p-4 flex items-center justify-between">
-          <h1 className={`font-bold text-xl truncate ${!isSidebarOpen && 'hidden'}`}>CoreInventory</h1>
+          <h1 className={cx('font-bold', 'text-xl', 'truncate', !isSidebarOpen && 'hidden')}>CoreInventory</h1>
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-slate-800 rounded">
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -50,12 +62,28 @@ const Layout = ({ children }) => {
             <Link
               key={item.name}
               to={item.path}
-              className={`flex items-center p-3 rounded-lg transition-colors ${
-                location.pathname === item.path ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
+              className={cx(
+                'flex',
+                'items-center',
+                'p-3',
+                'rounded-lg',
+                'transition-colors',
+                location.pathname === item.path
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              )}
             >
               <span className="min-w-[24px]">{item.icon}</span>
-              <span className={`ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
+              <span
+                className={cx(
+                  'ml-3',
+                  'whitespace-nowrap',
+                  'overflow-hidden',
+                  'transition-all',
+                  'duration-300',
+                  isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0'
+                )}
+              >
                 {item.name}
               </span>
             </Link>
@@ -67,7 +95,7 @@ const Layout = ({ children }) => {
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
-            <div className={`ml-3 overflow-hidden ${!isSidebarOpen && 'hidden'}`}>
+            <div className={cx('ml-3', 'overflow-hidden', !isSidebarOpen && 'hidden')}>
               <p className="text-sm font-medium truncate">{user?.name}</p>
               <p className="text-xs text-slate-400 truncate">{user?.role}</p>
             </div>
@@ -77,7 +105,7 @@ const Layout = ({ children }) => {
             className="w-full flex items-center p-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-lg transition-colors"
           >
             <LogOut size={20} />
-            <span className={`ml-3 ${!isSidebarOpen && 'hidden'}`}>Logout</span>
+            <span className={cx('ml-3', !isSidebarOpen && 'hidden')}>Logout</span>
           </button>
         </div>
       </aside>

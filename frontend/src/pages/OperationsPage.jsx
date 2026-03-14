@@ -24,39 +24,67 @@ const OperationsPage = () => {
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [prodRes, warRes] = await Promise.all([
-        productService.getProducts(),
-        warehouseService.getWarehouses()
-      ]);
-      setProducts(prodRes.data);
-      setWarehouses(warRes.data);
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const [prodRes, warRes] = await Promise.all([
+          productService.getProducts(),
+          warehouseService.getWarehouses()
+        ]);
+        if (!isMounted) return;
+        setProducts(prodRes.data);
+        setWarehouses(warRes.data);
+      } catch (error) {
+        console.error('Failed to load products/warehouses:', error);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
     };
-    fetchData();
   }, []);
 
   useEffect(() => {
-    const fetchLocations = async () => {
-      if (formData.warehouse_id) {
+    let isMounted = true;
+
+    (async () => {
+      try {
+        if (!formData.warehouse_id) {
+          if (isMounted) setLocations([]);
+          return;
+        }
         const locRes = await warehouseService.getLocations(formData.warehouse_id);
-        setLocations(locRes.data);
-      } else {
-        setLocations([]);
+        if (isMounted) setLocations(locRes.data);
+      } catch (error) {
+        console.error('Failed to load locations:', error);
       }
+    })();
+
+    return () => {
+      isMounted = false;
     };
-    fetchLocations();
   }, [formData.warehouse_id]);
 
   useEffect(() => {
-    const fetchDestinationLocations = async () => {
-      if (formData.dest_warehouse_id) {
+    let isMounted = true;
+
+    (async () => {
+      try {
+        if (!formData.dest_warehouse_id) {
+          if (isMounted) setDestinationLocations([]);
+          return;
+        }
         const locRes = await warehouseService.getLocations(formData.dest_warehouse_id);
-        setDestinationLocations(locRes.data);
-      } else {
-        setDestinationLocations([]);
+        if (isMounted) setDestinationLocations(locRes.data);
+      } catch (error) {
+        console.error('Failed to load destination locations:', error);
       }
+    })();
+
+    return () => {
+      isMounted = false;
     };
-    fetchDestinationLocations();
   }, [formData.dest_warehouse_id]);
 
   const handleSubmit = async (e) => {
