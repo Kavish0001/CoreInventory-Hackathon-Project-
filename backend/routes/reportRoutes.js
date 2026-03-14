@@ -8,5 +8,6 @@ router.use(authMiddleware);
 router.get('/dashboard', reportController.getDashboardStats);
 router.get('/ledger', reportController.getStockLedger);
 router.get('/low-stock', reportController.getLowStockAlerts);
+router.get('/stock', reportController.getStockSnapshot);
 
 module.exports = router;

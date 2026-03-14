@@ -25,7 +25,9 @@ const StockLedger = () => {
   const filteredLedger = ledger.filter(item => 
     item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.type.toLowerCase().includes(searchTerm.toLowerCase())
+    item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.reference_code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.contact || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getTypeColor = (type) => {
@@ -42,13 +44,13 @@ const StockLedger = () => {
   if (loading) {
     tableBodyContent = (
       <tr>
-        <td colSpan="6" className="px-6 py-12 text-center text-gray-500">Loading ledger...</td>
+        <td colSpan="8" className="px-6 py-12 text-center text-gray-500">Loading ledger...</td>
       </tr>
     );
   } else if (filteredLedger.length === 0) {
     tableBodyContent = (
       <tr>
-        <td colSpan="6" className="px-6 py-12 text-center text-gray-500 italic">No movement records found.</td>
+        <td colSpan="8" className="px-6 py-12 text-center text-gray-500 italic">No movement records found.</td>
       </tr>
     );
   } else {
@@ -57,6 +59,8 @@ const StockLedger = () => {
         <td className="px-6 py-4 text-sm text-gray-600">
           {format(new Date(item.created_at), 'MMM dd, yyyy HH:mm')}
         </td>
+        <td className="px-6 py-4 text-sm text-gray-600">{item.reference_code || '-'}</td>
+        <td className="px-6 py-4 text-sm text-gray-600">{item.contact || '-'}</td>
         <td className="px-6 py-4">
           <div className="font-medium text-gray-900">{item.product_name}</div>
           <div className="text-xs text-gray-500">{item.sku}</div>
@@ -106,6 +110,8 @@ const StockLedger = () => {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date & Time</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Reference</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Contact</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Product</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Type</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Quantity</th>

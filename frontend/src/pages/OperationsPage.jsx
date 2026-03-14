@@ -67,26 +67,35 @@ const OperationsPage = () => {
     try {
       let response;
       if (activeTab === 'receipt') {
-        response = await inventoryService.createReceipt({
+        const createRes = await inventoryService.createReceipt({
           supplier: formData.supplier,
           warehouse_id: formData.warehouse_id,
           location_id: formData.location_id,
           products: [{ product_id: formData.product_id, quantity: Number.parseInt(formData.quantity, 10) }]
         });
+
+        await inventoryService.confirmReceipt(createRes.data.receiptId);
+        response = await inventoryService.validateReceipt(createRes.data.receiptId);
       } else if (activeTab === 'delivery') {
-        response = await inventoryService.createDelivery({
+        const createRes = await inventoryService.createDelivery({
           customer: formData.customer,
           warehouse_id: formData.warehouse_id,
           location_id: formData.location_id,
           products: [{ product_id: formData.product_id, quantity: Number.parseInt(formData.quantity, 10) }]
         });
+
+        const confirmRes = await inventoryService.confirmDelivery(createRes.data.deliveryId);
+        if (confirmRes.data.status === 'ready') {
+          response = await inventoryService.validateDelivery(createRes.data.deliveryId);
+        } else {
+          response = confirmRes;
+        }
       } else if (activeTab === 'transfer') {
         response = await inventoryService.createTransfer({
-          product_id: formData.product_id,
-          source_warehouse_id: formData.warehouse_id,
+          warehouse_id: formData.warehouse_id,
           source_location_id: formData.location_id,
-          dest_warehouse_id: formData.dest_warehouse_id,
-          dest_location_id: formData.dest_location_id,
+          destination_location_id: formData.dest_location_id,
+          products: [{ product_id: formData.product_id, quantity: Number.parseInt(formData.quantity, 10) }],
           quantity: Number.parseInt(formData.quantity, 10)
         });
       } else if (activeTab === 'adjustment') {

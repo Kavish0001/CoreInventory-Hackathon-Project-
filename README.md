@@ -124,6 +124,8 @@ http://localhost:5000/api
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/forgot-password` (returns `reset_code` only when `NODE_ENV != production`)
+- `POST /auth/reset-password`
 
 ### Products
 
@@ -141,23 +143,30 @@ http://localhost:5000/api
 
 ### Inventory
 
-- `POST /inventory/receipts`
-- `POST /inventory/deliveries`
+- `GET /inventory/receipts` (search: `?q=...`, filter: `?status=...`)
+- `GET /inventory/deliveries` (search: `?q=...`, filter: `?status=...`)
+- `POST /inventory/receipts` (creates Draft)
+- `POST /inventory/receipts/:id/confirm` (Draft → Ready)
+- `POST /inventory/receipts/:id/validate` (Ready → Done; updates stock + ledger)
+- `POST /inventory/deliveries` (creates Draft)
+- `POST /inventory/deliveries/:id/confirm` (Draft → Ready/Waiting based on stock)
+- `POST /inventory/deliveries/:id/validate` (Ready → Done; updates stock + ledger)
 - `POST /inventory/transfers`
 - `POST /inventory/adjustments`
 
 ### Reports
 
 - `GET /reports/dashboard`
-- `GET /reports/ledger`
+- `GET /reports/ledger` (search: `?q=...`)
 - `GET /reports/low-stock`
+- `GET /reports/stock`
 
 ## Local Setup
 
 ## 1) Database
 
 1. Create a PostgreSQL database named `coreinventory_db`
-2. Execute `database/schema.sql`
+2. Execute `database/schema.sql` (or run `npm run init-db` from `backend/`)
 
 ## 2) Backend
 
@@ -181,7 +190,7 @@ JWT_SECRET=your_jwt_secret
 Run backend:
 
 ```bash
-node index.js
+npm run start
 ```
 
 ## 3) Frontend

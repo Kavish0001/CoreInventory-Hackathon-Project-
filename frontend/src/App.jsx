@@ -4,9 +4,12 @@ import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import Dashboard from './pages/Dashboard';
 import ProductPage from './pages/ProductPage';
 import OperationsPage from './pages/OperationsPage';
+import Stock from './pages/Stock';
 import StockLedger from './pages/StockLedger';
 import WarehousesPage from './pages/WarehousesPage';
 
@@ -30,6 +33,8 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/" element={
             <ProtectedRoute>
               <Dashboard />
@@ -43,6 +48,11 @@ function App() {
           <Route path="/operations" element={
             <ProtectedRoute>
               <OperationsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/stock" element={
+            <ProtectedRoute>
+              <Stock />
             </ProtectedRoute>
           } />
           <Route path="/ledger" element={

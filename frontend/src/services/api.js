@@ -26,6 +26,8 @@ api.interceptors.request.use(
 export const authService = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   register: (userData) => api.post('/auth/register', userData),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (payload) => api.post('/auth/reset-password', payload),
 };
 
 export const productService = {
@@ -42,16 +44,23 @@ export const warehouseService = {
 };
 
 export const inventoryService = {
+  listReceipts: (params) => api.get('/inventory/receipts', { params }),
+  listDeliveries: (params) => api.get('/inventory/deliveries', { params }),
   createReceipt: (data) => api.post('/inventory/receipts', data),
+  confirmReceipt: (id) => api.post(`/inventory/receipts/${id}/confirm`),
+  validateReceipt: (id) => api.post(`/inventory/receipts/${id}/validate`),
   createDelivery: (data) => api.post('/inventory/deliveries', data),
+  confirmDelivery: (id) => api.post(`/inventory/deliveries/${id}/confirm`),
+  validateDelivery: (id) => api.post(`/inventory/deliveries/${id}/validate`),
   createTransfer: (data) => api.post('/inventory/transfers', data),
   createAdjustment: (data) => api.post('/inventory/adjustments', data),
 };
 
 export const reportService = {
   getDashboardStats: () => api.get('/reports/dashboard'),
-  getStockLedger: () => api.get('/reports/ledger'),
+  getStockLedger: (params) => api.get('/reports/ledger', { params }),
   getLowStockAlerts: () => api.get('/reports/low-stock'),
+  getStockSnapshot: (params) => api.get('/reports/stock', { params }),
 };
 
 export default api;

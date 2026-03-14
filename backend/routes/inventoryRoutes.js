@@ -5,8 +5,18 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
 
+// List / search (list or kanban grouping in UI)
+router.get('/receipts', inventoryController.listReceipts);
+router.get('/deliveries', inventoryController.listDeliveries);
+
 router.post('/receipts', inventoryController.createReceipt);
+router.post('/receipts/:id/confirm', inventoryController.confirmReceipt);
+router.post('/receipts/:id/validate', inventoryController.validateReceipt);
+
 router.post('/deliveries', inventoryController.createDelivery);
+router.post('/deliveries/:id/confirm', inventoryController.confirmDelivery);
+router.post('/deliveries/:id/validate', inventoryController.validateDelivery);
+
 router.post('/transfers', inventoryController.createTransfer);
 router.post('/adjustments', inventoryController.createAdjustment);
 

@@ -9,6 +9,7 @@ import {
   Warehouse, 
   LogOut, 
   BarChart3,
+  Boxes,
   Menu,
   X
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const Layout = ({ children }) => {
     { name: 'Products', icon: <Package size={20} />, path: '/products' },
     { name: 'Operations', icon: <ArrowLeftRight size={20} />, path: '/operations' },
     { name: 'Warehouses', icon: <Warehouse size={20} />, path: '/warehouses' },
+    { name: 'Stock', icon: <Boxes size={20} />, path: '/stock' },
     { name: 'Stock Ledger', icon: <BarChart3 size={20} />, path: '/ledger' },
   ];
 

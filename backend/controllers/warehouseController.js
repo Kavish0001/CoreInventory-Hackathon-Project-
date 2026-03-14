@@ -11,12 +11,12 @@ exports.getWarehouses = async (req, res) => {
 };
 
 exports.createWarehouse = async (req, res) => {
-  const { name, location } = req.body;
+  const { name, short_code, location, address } = req.body;
 
   try {
     const newWarehouse = await db.query(
-      'INSERT INTO warehouses (name, location) VALUES ($1, $2) RETURNING *',
-      [name, location]
+      'INSERT INTO warehouses (name, short_code, location, address) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, short_code?.trim() || null, location, address || null]
     );
     res.status(201).json(newWarehouse.rows[0]);
   } catch (err) {
@@ -37,12 +37,12 @@ exports.getInventoryLocations = async (req, res) => {
 };
 
 exports.createInventoryLocation = async (req, res) => {
-  const { warehouse_id, location_name } = req.body;
+  const { warehouse_id, location_name, short_code } = req.body;
 
   try {
     const newLocation = await db.query(
-      'INSERT INTO inventory_locations (warehouse_id, location_name) VALUES ($1, $2) RETURNING *',
-      [warehouse_id, location_name]
+      'INSERT INTO inventory_locations (warehouse_id, location_name, short_code) VALUES ($1, $2, $3) RETURNING *',
+      [warehouse_id, location_name, short_code?.trim() || null]
     );
     res.status(201).json(newLocation.rows[0]);
   } catch (err) {

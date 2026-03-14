@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 
 const LoginPage = () => {
@@ -73,6 +74,11 @@ const LoginPage = () => {
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
+          </div>
+
+          <div className="flex justify-between text-sm">
+            <Link to="/forgot-password" className="text-blue-600 hover:text-blue-800">Forgot password?</Link>
+            <Link to="/signup" className="text-blue-600 hover:text-blue-800">Sign up</Link>
           </div>
         </form>
       </div>
