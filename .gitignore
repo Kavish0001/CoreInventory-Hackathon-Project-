@@ -2,6 +2,9 @@
 .DS_Store
 Thumbs.db
 
+# Documentation
+docs/
+
 # Env files
 .env
 **/.env
@@ -31,3 +34,5 @@ build/
 # Coverage
 coverage/
 
+# Dummy folder
+dummy_backend/

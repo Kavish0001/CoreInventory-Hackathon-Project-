@@ -1,115 +1,91 @@
-import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
-import { isValidEmail } from '../utils/authValidation';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginUser, clearAuthError, selectAuth } from '../features/auth/authSlice';
+import { Package } from 'lucide-react';
 
-const LoginPage = () => {
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+export default function LoginPage() {
+  const [formData, setFormData] = useState({ identifier: '', password: '' });
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user, loading, error } = useSelector(selectAuth);
+
+  useEffect(() => {
+    dispatch(clearAuthError());
+    if (user) navigate('/');
+  }, [user, navigate, dispatch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setInfo('');
-    setLoading(true);
-
-    const trimmed = identifier.trim();
-    if (!trimmed) {
-      setLoading(false);
-      setError('Email or Login ID is required');
-      return;
-    }
-
-    if (trimmed.includes('@') && !isValidEmail(trimmed)) {
-      setLoading(false);
-      setError('Enter a valid email address');
-      return;
-    }
-
-    const result = await login(trimmed, password);
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.error);
-    }
-    setLoading(false);
+    dispatch(loginUser(formData));
   };
 
-  const canSubmit = !loading && identifier.trim().length > 0 && password.length > 0;
-
   return (
-    <div className="min-h-screen grid place-items-center p-4">
-      <div className="ci-shell w-full max-w-5xl grid md:grid-cols-2 overflow-hidden">
-        <div className="hidden md:flex flex-col justify-between bg-violet-700 p-10 text-white">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-violet-200">CoreInventory</p>
-            <h2 className="mt-4 text-3xl font-semibold leading-tight">Manage inventory with speed and clarity</h2>
-            <p className="mt-4 text-sm text-violet-100">Track receipts, deliveries, stock levels, and movement history from one dashboard.</p>
+    <div className="min-h-screen bg-surface flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div className="flex justify-center mb-4">
+          <div className="bg-primary p-3 rounded-2xl shadow-lg">
+            <Package size={32} className="text-white" />
           </div>
-          <div className="text-xs text-violet-200">Warehouse, products, operations and reporting in one flow.</div>
         </div>
+        <h2 className="text-3xl font-bold text-text-primary tracking-tight">CoreInventory</h2>
+        <p className="mt-2 text-sm text-text-secondary">Enterprise Inventory Management</p>
+      </div>
 
-        <div className="p-8 sm:p-10">
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <LogIn className="w-6 h-6 text-violet-700" /> Sign in
-          </h2>
-          <p className="mt-2 text-sm text-slate-500">Use email or login ID to continue</p>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-card py-8 px-4 shadow-[var(--shadow-card)] border border-border sm:rounded-2xl sm:px-10">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="identifier" className="block text-sm font-medium text-text-primary mb-1">Email or Login ID</label>
+              <input
+                id="identifier"
+                required
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                value={formData.identifier}
+                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+              />
+            </div>
 
-          <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-text-primary">Password</label>
+                <Link to="/forgot-password" className="text-xs font-medium text-primary hover:text-primary-dark transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
+              <input
+                id="password"
+                type="password"
+                required
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+            </div>
+
             {error && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="bg-danger-light border border-danger/20 text-danger text-sm rounded-lg p-3">
                 {error}
               </div>
             )}
-            {info && (
-              <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                {info}
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <input
-                type="text"
-                required
-                className="ci-input"
-                placeholder="Email or Login ID"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-              />
-              <input
-                type="password"
-                required
-                className="ci-input"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
 
             <button
               type="submit"
-              disabled={!canSubmit}
-              className="ci-button-primary w-full py-2.5"
+              disabled={loading}
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
-
-            <div className="flex justify-between text-sm">
-              <Link to="/forgot-password" className="text-violet-700 hover:text-violet-800 font-medium">Forgot password?</Link>
-              <Link to="/signup" className="text-violet-700 hover:text-violet-800 font-medium">Sign up</Link>
-            </div>
           </form>
+
+          <div className="mt-6 text-center text-sm">
+            <span className="text-text-secondary">Don't have an account? </span>
+            <Link to="/signup" className="font-medium text-primary hover:text-primary-dark transition-colors">
+              Sign up
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default LoginPage;
+}
