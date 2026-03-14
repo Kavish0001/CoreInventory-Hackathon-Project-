@@ -52,7 +52,7 @@ const SignUpPage = () => {
 
     const result = await register({
       name: form.name,
-      login_id: form.login_id,
+      ...(form.login_id.trim() ? { login_id: form.login_id } : {}),
       email: form.email,
       password: form.password,
     });

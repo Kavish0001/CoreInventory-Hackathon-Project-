@@ -166,3 +166,80 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_created_at ON inventory_movements(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_reference_code ON inventory_movements(reference_code);
+
+-- ----------------------------------------
+-- Lightweight "migrations" for dev: ensure
+-- existing tables get new columns when the
+-- DB was created with an older schema.sql.
+-- ----------------------------------------
+
+-- users
+ALTER TABLE users ADD COLUMN IF NOT EXISTS login_id VARCHAR(12);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user';
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'users_login_id_key'
+  ) THEN
+    CREATE UNIQUE INDEX users_login_id_key ON users(login_id);
+  END IF;
+END $$;
+
+-- warehouses
+ALTER TABLE warehouses ADD COLUMN IF NOT EXISTS short_code VARCHAR(16);
+ALTER TABLE warehouses ADD COLUMN IF NOT EXISTS address VARCHAR(500);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'warehouses_short_code_key'
+  ) THEN
+    CREATE UNIQUE INDEX warehouses_short_code_key ON warehouses(short_code);
+  END IF;
+END $$;
+
+-- inventory_locations
+ALTER TABLE inventory_locations ADD COLUMN IF NOT EXISTS short_code VARCHAR(32);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'uq_inventory_locations_wh_short_code'
+  ) THEN
+    CREATE UNIQUE INDEX uq_inventory_locations_wh_short_code ON inventory_locations(warehouse_id, short_code);
+  END IF;
+END $$;
+
+-- receipts
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS contact VARCHAR(255);
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS warehouse_id INTEGER;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS location_id INTEGER;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS schedule_date DATE;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS responsible_user_id INTEGER;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS reference_code VARCHAR(64);
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS created_by INTEGER;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'draft';
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'receipts_reference_code_key'
+  ) THEN
+    CREATE UNIQUE INDEX receipts_reference_code_key ON receipts(reference_code);
+  END IF;
+END $$;
+
+-- deliveries
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS contact VARCHAR(255);
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_address VARCHAR(500);
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS warehouse_id INTEGER;
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS location_id INTEGER;
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS schedule_date DATE;
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS responsible_user_id INTEGER;
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS reference_code VARCHAR(64);
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS created_by INTEGER;
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'draft';
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'deliveries_reference_code_key'
+  ) THEN
+    CREATE UNIQUE INDEX deliveries_reference_code_key ON deliveries(reference_code);
+  END IF;
+END $$;
+
+-- inventory_movements
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference_code VARCHAR(64);
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS contact VARCHAR(255);

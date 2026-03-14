@@ -17,6 +17,7 @@ function validateLoginId(loginId) {
   if (loginId == null) return null;
   if (typeof loginId !== 'string') return 'Login ID must be a string';
   const trimmed = loginId.trim();
+  if (trimmed === '') return null;
   if (trimmed.length < 6 || trimmed.length > 12) return 'Login ID must be 6-12 characters';
   if (!/^[A-Za-z0-9_]+$/.test(trimmed)) return 'Login ID can contain letters, numbers, and underscore only';
   return null;
@@ -26,18 +27,24 @@ exports.register = async (req, res) => {
   const { name, email, login_id, password, role } = req.body;
 
   try {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!name || String(name).trim() === '') return res.status(400).json({ message: 'Name is required' });
+    if (!normalizedEmail) return res.status(400).json({ message: 'Email is required' });
+
     const loginIdError = validateLoginId(login_id);
     if (loginIdError) return res.status(400).json({ message: loginIdError });
     const passwordError = validatePasswordStrength(password);
     if (passwordError) return res.status(400).json({ message: passwordError });
 
-    const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const loginIdTrimmed = typeof login_id === 'string' ? login_id.trim() : null;
+
+    const userExists = await db.query('SELECT 1 FROM users WHERE email = $1', [normalizedEmail]);
     if (userExists.rows.length > 0) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    if (login_id) {
-      const loginIdExists = await db.query('SELECT * FROM users WHERE login_id = $1', [login_id.trim()]);
+    if (loginIdTrimmed) {
+      const loginIdExists = await db.query('SELECT 1 FROM users WHERE login_id = $1', [loginIdTrimmed]);
       if (loginIdExists.rows.length > 0) {
         return res.status(400).json({ message: 'Login ID already exists' });
       }
@@ -48,7 +55,7 @@ exports.register = async (req, res) => {
 
     const newUser = await db.query(
       'INSERT INTO users (name, login_id, email, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, login_id, email, role',
-      [name, login_id?.trim() || null, email, passwordHash, role || 'user']
+      [String(name).trim(), loginIdTrimmed || null, normalizedEmail, passwordHash, role || 'user']
     );
 
     const config = getConfig();
@@ -56,8 +63,14 @@ exports.register = async (req, res) => {
 
     res.status(201).json({ user: newUser.rows[0], token });
   } catch (err) {
+    // Handle unique constraint races cleanly
+    if (err && err.code === '23505') {
+      return res.status(400).json({ message: 'Email or Login ID already exists' });
+    }
+
     console.error(err);
-    res.status(500).send('Server error');
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({ message: isProduction ? 'Server error' : (err.message || 'Server error') });
   }
 };
 
@@ -68,7 +81,8 @@ exports.login = async (req, res) => {
     const identifier = (login_id || email || '').trim();
     if (!identifier) return res.status(400).json({ message: 'Email or Login ID is required' });
 
-    const user = await db.query('SELECT * FROM users WHERE email = $1 OR login_id = $1', [identifier]);
+    const normalized = identifier.includes('@') ? identifier.toLowerCase() : identifier;
+    const user = await db.query('SELECT * FROM users WHERE email = $1 OR login_id = $1', [normalized]);
     if (user.rows.length === 0) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -93,7 +107,8 @@ exports.login = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({ message: isProduction ? 'Server error' : (err.message || 'Server error') });
   }
 };
 
