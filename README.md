@@ -223,10 +223,3 @@ http://localhost:5173
 6. Create delivery
 7. Run adjustment
 8. Show live stock ledger and dashboard KPI updates
-
-## Team Split (4-Developer Hackathon Model)
-
-- Developer 1: Database schema + stock logic
-- Developer 2: Backend routing/controllers
-- Developer 3: Frontend pages and UX
-- Developer 4: Auth, integration, validation, and final polish
